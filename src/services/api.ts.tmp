@@ -1,0 +1,35 @@
+
+  // Export Methods for Salary and Receipts screens
+  async exportAllSalariesPDF(): Promise<Blob> {
+    const url = \\/pdf/all-salaries\;
+    
+    const headers: Record<string, string> = {};
+    if (this.authToken) {
+      headers.Authorization = \Bearer \\;
+    }
+
+    const response = await fetch(url, { headers });
+    
+    if (!response.ok) {
+      throw new Error(\Failed to export salaries PDF: \\);
+    }
+    
+    return response.blob();
+  }
+
+  async exportAllReceiptsPDF(): Promise<Blob> {
+    const url = \\/pdf/all-receipts\;
+    
+    const headers: Record<string, string> = {};
+    if (this.authToken) {
+      headers.Authorization = \Bearer \\;
+    }
+
+    const response = await fetch(url, { headers });
+    
+    if (!response.ok) {
+      throw new Error(\Failed to export receipts PDF: \\);
+    }
+    
+    return response.blob();
+  }
