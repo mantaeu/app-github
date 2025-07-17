@@ -112,3 +112,4 @@ jspm_packages/
 
 expo-env.d.ts
 # @end expo-cli
+.vercel

@@ -10,8 +10,9 @@
     "web": "npx expo start --web",
     "backend": "cd backend && npm start",
     "backend:dev": "cd backend && npm run dev",
+    "build": "npx expo build:web",
     "build:web": "npx expo build:web",
-    "predeploy": "npm run build:web",
+    "predeploy": "npm run build",
     "deploy": "gh-pages -d web-build",
     "build:android": "eas build -p android --profile preview"
   },
