@@ -1,20 +1,16 @@
 {
-  "name": "mantaevert-hr-app",
+  "name": "mantaevert-app",
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
-  "homepage": "https://mantaeu.github.io/mantaevert-hr-app",
   "scripts": {
-    "start": "npx expo start",
-    "android": "npx expo start --android",
-    "ios": "npx expo start --ios",
-    "web": "npx expo start --web",
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
     "backend": "cd backend && npm start",
     "backend:dev": "cd backend && npm run dev",
-    "build": "npx expo export:web",
-    "build:web": "npx expo export:web",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d web-build",
-    "build:android": "eas build -p android --profile preview"
+    "predeploy": "expo export:web",
+    "deploy": "gh-pages -d web-build"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",
