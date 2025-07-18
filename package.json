@@ -7,8 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build": "cd backend && npm run build",
-    "backend": "cd backend && npm start",
+    "build": "npx expo export -p web && cd backend && npm run build",
+     "backend": "cd backend && npm start",
     "backend:dev": "cd backend && npm run dev",
     "predeploy": "expo export:web",
     "deploy": "gh-pages -d web-build"

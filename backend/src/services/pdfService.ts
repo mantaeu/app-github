@@ -19,7 +19,7 @@ export class PDFService {
     return this.browser;
   }
 
-  // Individual Salary Slip PDF Generation (Single Page)
+  // Individual Salary Slip PDF Generation
   static async generateIndividualSalarySlipPDF(salaryId: string): Promise<Buffer> {
     const browser = await this.getBrowser();
     const page = await browser.newPage();
@@ -40,12 +40,11 @@ export class PDFService {
         format: 'A4',
         printBackground: true,
         margin: {
-          top: '10px',
-          right: '10px',
-          bottom: '10px',
-          left: '10px'
-        },
-        preferCSSPageSize: true
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px'
+        }
       });
 
       return pdf;
@@ -54,7 +53,7 @@ export class PDFService {
     }
   }
 
-  // Individual Receipt PDF Generation (Single Page)
+  // Individual Receipt PDF Generation
   static async generateIndividualReceiptPDF(receiptId: string): Promise<Buffer> {
     const browser = await this.getBrowser();
     const page = await browser.newPage();
@@ -75,12 +74,11 @@ export class PDFService {
         format: 'A4',
         printBackground: true,
         margin: {
-          top: '10px',
-          right: '10px',
-          bottom: '10px',
-          left: '10px'
-        },
-        preferCSSPageSize: true
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px'
+        }
       });
 
       return pdf;
@@ -150,7 +148,7 @@ export class PDFService {
     }
   }
 
-  // Individual Salary Slip HTML Template (Fixed Logo and Watermark)
+  // Individual Salary Slip HTML Template (Black design with orange logo)
   private static generateIndividualSalarySlipHTML(salary: any, user: any): string {
     return `
       <!DOCTYPE html>
@@ -165,183 +163,157 @@ export class PDFService {
             box-sizing: border-box;
           }
           
-          @page {
-            size: A4;
-            margin: 0;
-          }
-          
           body {
             font-family: 'Arial', sans-serif;
             background: #000000;
             color: #ffffff;
-            padding: 12px;
-            line-height: 1.1;
-            font-size: 10px;
-            height: 100vh;
-            overflow: hidden;
+            padding: 40px;
+            line-height: 1.6;
           }
           
           .container {
-            width: 100%;
-            height: 100%;
+            max-width: 800px;
+            margin: 0 auto;
             background: #111111;
-            border-radius: 8px;
+            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(255, 165, 0, 0.3);
-            display: flex;
-            flex-direction: column;
-            position: relative;
+            box-shadow: 0 20px 40px rgba(255, 165, 0, 0.3);
           }
           
           .header {
             background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
-            padding: 12px;
+            padding: 40px;
             text-align: center;
-            border-bottom: 2px solid #ff6600;
+            border-bottom: 3px solid #ff6600;
             position: relative;
-            flex-shrink: 0;
-            z-index: 2;
           }
           
           .logo {
-            width: 55px;
-            height: 55px;
+            width: 80px;
+            height: 80px;
             background: linear-gradient(135deg, #ff6600 0%, #ff8533 100%);
             border-radius: 50%;
-            margin: 0 auto 10px;
+            margin: 0 auto 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
+            font-size: 36px;
             font-weight: bold;
             color: #000000;
-            box-shadow: 0 8px 16px rgba(255, 102, 0, 0.5);
-            border: 3px solid #ff8533;
-            position: relative;
-            z-index: 3;
+            box-shadow: 0 10px 20px rgba(255, 102, 0, 0.4);
           }
           
           .company-name {
-            font-size: 18px;
+            font-size: 32px;
             font-weight: bold;
             color: #ff6600;
-            margin-bottom: 4px;
+            margin-bottom: 10px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            z-index: 3;
-            position: relative;
+            letter-spacing: 2px;
           }
           
           .document-title {
-            font-size: 14px;
+            font-size: 24px;
             color: #ffffff;
-            margin-bottom: 6px;
+            margin-bottom: 15px;
             font-weight: 300;
-            z-index: 3;
-            position: relative;
           }
           
           .period {
-            font-size: 11px;
+            font-size: 18px;
             color: #cccccc;
             background: #222222;
-            padding: 4px 12px;
-            border-radius: 12px;
+            padding: 10px 20px;
+            border-radius: 25px;
             display: inline-block;
-            z-index: 3;
-            position: relative;
           }
           
           .content {
-            padding: 10px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 2;
-            position: relative;
+            padding: 40px;
           }
           
-          .info-section {
+          .employee-section {
             background: #1a1a1a;
-            border-radius: 5px;
-            padding: 8px;
-            border-left: 3px solid #ff6600;
-            flex-shrink: 0;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-left: 5px solid #ff6600;
           }
           
           .section-title {
-            font-size: 11px;
+            font-size: 20px;
             color: #ff6600;
-            margin-bottom: 6px;
+            margin-bottom: 20px;
             font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          
+          .employee-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+          }
+          
+          .info-item {
+            margin-bottom: 15px;
+          }
+          
+          .info-label {
+            font-size: 14px;
+            color: #999999;
+            margin-bottom: 5px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
           
-          .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-          }
-          
-          .info-item {
-            margin-bottom: 5px;
-          }
-          
-          .info-label {
-            font-size: 8px;
-            color: #999999;
-            margin-bottom: 1px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-          }
-          
           .info-value {
-            font-size: 9px;
+            font-size: 16px;
             color: #ffffff;
             font-weight: 600;
           }
           
           .salary-section {
             background: #1a1a1a;
-            border-radius: 5px;
-            padding: 8px;
-            border-left: 3px solid #ff6600;
-            flex: 1;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-left: 5px solid #ff6600;
           }
           
           .salary-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
+            margin-top: 20px;
           }
           
           .salary-table th {
             background: #ff6600;
             color: #000000;
-            padding: 5px;
+            padding: 15px;
             text-align: left;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
-            font-size: 8px;
+            letter-spacing: 0.5px;
           }
           
           .salary-table td {
-            padding: 5px;
+            padding: 15px;
             border-bottom: 1px solid #333333;
             color: #ffffff;
-            font-size: 8px;
           }
           
           .salary-table tr:nth-child(even) {
             background: #222222;
           }
           
+          .salary-table tr:hover {
+            background: #2a2a2a;
+          }
+          
           .amount {
             font-weight: bold;
-            font-size: 9px;
+            font-size: 16px;
           }
           
           .positive {
@@ -356,24 +328,53 @@ export class PDFService {
             background: #ff6600 !important;
             color: #000000 !important;
             font-weight: bold;
-            font-size: 10px;
+            font-size: 18px;
           }
           
           .total-row td {
             border: none;
             color: #000000 !important;
-            padding: 6px 5px;
+          }
+          
+          .signature-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 2px solid #333333;
+          }
+          
+          .signature-box {
+            text-align: center;
+            padding: 20px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            border: 2px dashed #ff6600;
+          }
+          
+          .signature-label {
+            color: #ff6600;
+            font-weight: bold;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          
+          .signature-line {
+            border-top: 2px solid #ff6600;
+            margin-top: 40px;
+            padding-top: 10px;
+            color: #cccccc;
+            font-size: 12px;
           }
           
           .footer {
             background: #000000;
-            padding: 6px;
+            padding: 30px;
             text-align: center;
             color: #666666;
-            font-size: 7px;
-            flex-shrink: 0;
-            z-index: 2;
-            position: relative;
+            font-size: 12px;
           }
           
           .footer-highlight {
@@ -386,23 +387,18 @@ export class PDFService {
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 80px;
-            color: rgba(255, 102, 0, 0.01);
+            font-size: 120px;
+            color: rgba(255, 102, 0, 0.05);
             font-weight: bold;
-            z-index: 1;
+            z-index: 0;
             pointer-events: none;
-            opacity: 0.01;
-            user-select: none;
           }
         </style>
       </head>
       <body>
         <div class="container">
-          <!-- Properly Transparent Watermark -->
-          <div class="watermark">MANTAEVERT</div>
-          
           <div class="header">
-            <!-- Fixed Logo -->
+            <div class="watermark">MANTAEVERT</div>
             <div class="logo">M</div>
             <div class="company-name">Mantaevert</div>
             <div class="document-title">Salary Slip</div>
@@ -410,9 +406,9 @@ export class PDFService {
           </div>
 
           <div class="content">
-            <div class="info-section">
+            <div class="employee-section">
               <div class="section-title">Employee Information</div>
-              <div class="info-grid">
+              <div class="employee-grid">
                 <div>
                   <div class="info-item">
                     <div class="info-label">Full Name</div>
@@ -429,11 +425,11 @@ export class PDFService {
                 </div>
                 <div>
                   <div class="info-item">
-                    <div class="info-label">Email</div>
+                    <div class="info-label">Email Address</div>
                     <div class="info-value">${user.email}</div>
                   </div>
                   <div class="info-item">
-                    <div class="info-label">Phone</div>
+                    <div class="info-label">Phone Number</div>
                     <div class="info-value">${user.phone || 'N/A'}</div>
                   </div>
                   <div class="info-item">
@@ -482,23 +478,22 @@ export class PDFService {
               </table>
             </div>
 
-            <!-- Signature Sections -->
-            <div style="display: flex; justify-content: space-between; gap: 15px; margin-top: 3px; flex-shrink: 0;">
-              <div style="text-align: center; flex: 1; background: #1a1a1a; padding: 10px; border-radius: 5px; border: 1px dashed #ff6600;">
-                <div style="color: #ff6600; font-weight: bold; margin-bottom: 6px; font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Employee Signature</div>
-                <div style="height: 30px; border-bottom: 2px solid #ff6600; margin: 6px 0; background: rgba(255, 102, 0, 0.05); border-radius: 3px;"></div>
-                <div style="color: #cccccc; font-size: 7px; margin-top: 3px;">Authorized Signature</div>
+            <div class="signature-section">
+              <div class="signature-box">
+                <div class="signature-label">Employee Signature</div>
+                <div class="signature-line">Authorized Signature</div>
               </div>
-              <div style="text-align: center; flex: 1; background: #1a1a1a; padding: 10px; border-radius: 5px; border: 1px dashed #ff6600;">
-                <div style="color: #ff6600; font-weight: bold; margin-bottom: 6px; font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px;">HR Manager</div>
-                <div style="height: 30px; border-bottom: 2px solid #ff6600; margin: 6px 0; background: rgba(255, 102, 0, 0.05); border-radius: 3px;"></div>
-                <div style="color: #cccccc; font-size: 7px; margin-top: 3px;">Authorized Signature</div>
+              <div class="signature-box">
+                <div class="signature-label">HR Manager</div>
+                <div class="signature-line">Authorized Signature</div>
               </div>
             </div>
           </div>
 
           <div class="footer">
-            <p>Computer-generated document | Generated on <span class="footer-highlight">${new Date().toLocaleDateString()}</span> | © ${new Date().getFullYear()} Mantaevert</p>
+            <p>This is a <span class="footer-highlight">computer-generated document</span>. No physical signature is required.</p>
+            <p>Generated on <span class="footer-highlight">${new Date().toLocaleDateString()}</span> | Mantaevert HR Management System</p>
+            <p>© ${new Date().getFullYear()} Mantaevert. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -506,7 +501,7 @@ export class PDFService {
     `;
   }
 
-  // Individual Receipt HTML Template (Fixed Logo and Watermark)
+  // Individual Receipt HTML Template (Black design with orange logo)
   private static generateIndividualReceiptHTML(receipt: any, user: any): string {
     return `
       <!DOCTYPE html>
@@ -521,206 +516,175 @@ export class PDFService {
             box-sizing: border-box;
           }
           
-          @page {
-            size: A4;
-            margin: 0;
-          }
-          
           body {
             font-family: 'Arial', sans-serif;
             background: #000000;
             color: #ffffff;
-            padding: 15px;
-            line-height: 1.2;
-            font-size: 11px;
-            height: 100vh;
-            overflow: hidden;
+            padding: 40px;
+            line-height: 1.6;
           }
           
           .container {
-            width: 100%;
-            height: 100%;
+            max-width: 800px;
+            margin: 0 auto;
             background: #111111;
-            border-radius: 8px;
+            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(255, 165, 0, 0.3);
-            display: flex;
-            flex-direction: column;
-            position: relative;
+            box-shadow: 0 20px 40px rgba(255, 165, 0, 0.3);
           }
           
           .header {
             background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
-            padding: 15px;
+            padding: 40px;
             text-align: center;
-            border-bottom: 2px solid #ff6600;
+            border-bottom: 3px solid #ff6600;
             position: relative;
-            flex-shrink: 0;
-            z-index: 2;
           }
           
           .logo {
-            width: 60px;
-            height: 60px;
+            width: 80px;
+            height: 80px;
             background: linear-gradient(135deg, #ff6600 0%, #ff8533 100%);
             border-radius: 50%;
-            margin: 0 auto 12px;
+            margin: 0 auto 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 30px;
+            font-size: 36px;
             font-weight: bold;
             color: #000000;
-            box-shadow: 0 8px 16px rgba(255, 102, 0, 0.5);
-            border: 3px solid #ff8533;
-            position: relative;
-            z-index: 3;
+            box-shadow: 0 10px 20px rgba(255, 102, 0, 0.4);
           }
           
           .company-name {
-            font-size: 20px;
+            font-size: 32px;
             font-weight: bold;
             color: #ff6600;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            z-index: 3;
-            position: relative;
+            letter-spacing: 2px;
           }
           
           .document-title {
-            font-size: 16px;
+            font-size: 24px;
             color: #ffffff;
-            margin-bottom: 8px;
+            margin-bottom: 15px;
             font-weight: 300;
-            z-index: 3;
-            position: relative;
           }
           
           .receipt-number {
-            font-size: 12px;
+            font-size: 18px;
             color: #cccccc;
             background: #222222;
-            padding: 5px 15px;
-            border-radius: 15px;
+            padding: 10px 20px;
+            border-radius: 25px;
             display: inline-block;
-            z-index: 3;
-            position: relative;
           }
           
           .content {
-            padding: 15px;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            z-index: 2;
-            position: relative;
+            padding: 40px;
           }
           
           .receipt-info {
             background: #1a1a1a;
-            border-radius: 6px;
-            padding: 15px;
-            border-left: 3px solid #ff6600;
-            flex-shrink: 0;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-left: 5px solid #ff6600;
           }
           
           .section-title {
-            font-size: 14px;
+            font-size: 20px;
             color: #ff6600;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
           }
           
           .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 20px;
           }
           
           .info-item {
-            margin-bottom: 8px;
+            margin-bottom: 15px;
           }
           
           .info-label {
-            font-size: 9px;
+            font-size: 14px;
             color: #999999;
-            margin-bottom: 2px;
+            margin-bottom: 5px;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.5px;
           }
           
           .info-value {
-            font-size: 11px;
+            font-size: 16px;
             color: #ffffff;
             font-weight: 600;
           }
           
           .amount-section {
             background: #1a1a1a;
-            border-radius: 6px;
-            padding: 20px;
-            border-left: 3px solid #ff6600;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-left: 5px solid #ff6600;
             text-align: center;
-            flex-shrink: 0;
           }
           
           .amount-label {
-            font-size: 12px;
+            font-size: 16px;
             color: #999999;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
           }
           
           .amount-value {
-            font-size: 32px;
+            font-size: 48px;
             color: #ff6600;
             font-weight: bold;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
           }
           
           .type-badge {
             background: #ff6600;
             color: #000000;
-            padding: 6px 12px;
-            border-radius: 15px;
-            font-size: 10px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
           }
           
           .description-section {
             background: #1a1a1a;
-            border-radius: 6px;
-            padding: 15px;
-            border-left: 3px solid #ff6600;
-            flex: 1;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-left: 5px solid #ff6600;
           }
           
           .description-text {
-            font-size: 11px;
+            font-size: 16px;
             color: #ffffff;
-            line-height: 1.4;
+            line-height: 1.8;
             background: #222222;
-            padding: 12px;
-            border-radius: 5px;
-            border-left: 2px solid #ff6600;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 3px solid #ff6600;
           }
           
           .footer {
             background: #000000;
-            padding: 10px;
+            padding: 30px;
             text-align: center;
             color: #666666;
-            font-size: 8px;
-            flex-shrink: 0;
-            z-index: 2;
-            position: relative;
+            font-size: 12px;
           }
           
           .footer-highlight {
@@ -733,23 +697,18 @@ export class PDFService {
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 90px;
-            color: rgba(255, 102, 0, 0.01);
+            font-size: 120px;
+            color: rgba(255, 102, 0, 0.05);
             font-weight: bold;
-            z-index: 1;
+            z-index: 0;
             pointer-events: none;
-            opacity: 0.01;
-            user-select: none;
           }
         </style>
       </head>
       <body>
         <div class="container">
-          <!-- Properly Transparent Watermark -->
-          <div class="watermark">MANTAEVERT</div>
-          
           <div class="header">
-            <!-- Fixed Logo -->
+            <div class="watermark">MANTAEVERT</div>
             <div class="logo">M</div>
             <div class="company-name">Mantaevert</div>
             <div class="document-title">Payment Receipt</div>
@@ -806,7 +765,9 @@ export class PDFService {
           </div>
 
           <div class="footer">
-            <p>Computer-generated receipt | Generated on <span class="footer-highlight">${new Date().toLocaleDateString()}</span> | © ${new Date().getFullYear()} Mantaevert</p>
+            <p>This is a <span class="footer-highlight">computer-generated receipt</span>. No physical signature is required.</p>
+            <p>Generated on <span class="footer-highlight">${new Date().toLocaleDateString()}</span> | Mantaevert HR Management System</p>
+            <p>© ${new Date().getFullYear()} Mantaevert. All rights reserved.</p>
           </div>
         </div>
       </body>
