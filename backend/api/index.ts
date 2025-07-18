@@ -1,3 +1,4 @@
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -124,4 +125,6 @@ app.use('/api/pdf', pdfRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-export default app;
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return app(req, res);
+}
