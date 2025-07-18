@@ -5,7 +5,7 @@ import * as Sharing from 'expo-sharing';
 
 const API_BASE_URL = __DEV__ 
   ? 'http://192.168.0.113:5501/api' 
-  : 'https://manteau-app1-1fsk.vercel.app/api';
+  : 'https://app-github-sbnv-meeeeee-mantaeus-projects.vercel.app/api';
 
 class ApiService {
   private authToken: string | null = null;
