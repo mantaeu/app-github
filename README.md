@@ -196,4 +196,4 @@ For support, email support@mantaevert.com or create an issue in the GitHub repos
 
 ---
 
-**Mantaevert** - Modern HR Management Made Simple
+**Mantaevert** - Modern HR Management Made Simple# app-github
