@@ -2,10 +2,7 @@ import { ApiResponse, User, AttendanceRecord, SalaryRecord, Receipt } from '../t
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-
-const API_BASE_URL = __DEV__ 
-  ? 'http://192.168.0.113:5501/api' 
-  : 'https://app-github-sbnv-meeeeee.vercel.app/api';
+const API_BASE_URL = 'https://app-github-sbnv-meeeeee.vercel.app/api';
 
 class ApiService {
   private authToken: string | null = null;
