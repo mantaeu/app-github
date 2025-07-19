@@ -18,7 +18,6 @@ export class PDFService {
         defaultViewport: chromium.defaultViewport,
         executablePath,
         headless: chromium.headless,
-        ignoreHTTPSErrors: true,
       });
     }
     return this.browser;
@@ -41,7 +40,7 @@ export class PDFService {
       
       await page.setContent(html, { waitUntil: 'networkidle0' });
       
-      const pdf = await page.pdf({
+      const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
         margin: {
@@ -52,7 +51,7 @@ export class PDFService {
         }
       });
 
-      return pdf;
+      return Buffer.from(pdfBuffer);
     } finally {
       await page.close();
     }
@@ -75,7 +74,7 @@ export class PDFService {
       
       await page.setContent(html, { waitUntil: 'networkidle0' });
       
-      const pdf = await page.pdf({
+      const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
         margin: {
@@ -86,7 +85,7 @@ export class PDFService {
         }
       });
 
-      return pdf;
+      return Buffer.from(pdfBuffer);
     } finally {
       await page.close();
     }
@@ -106,7 +105,7 @@ export class PDFService {
       
       await page.setContent(html, { waitUntil: 'networkidle0' });
       
-      const pdf = await page.pdf({
+      const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
         margin: {
@@ -117,7 +116,7 @@ export class PDFService {
         }
       });
 
-      return pdf;
+      return Buffer.from(pdfBuffer);
     } finally {
       await page.close();
     }
@@ -136,7 +135,7 @@ export class PDFService {
       
       await page.setContent(html, { waitUntil: 'networkidle0' });
       
-      const pdf = await page.pdf({
+      const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
         margin: {
@@ -147,7 +146,7 @@ export class PDFService {
         }
       });
 
-      return pdf;
+      return Buffer.from(pdfBuffer);
     } finally {
       await page.close();
     }

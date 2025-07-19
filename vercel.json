@@ -1,6 +1,0 @@
-{
-  "buildCommand": "npm run build:web",
-  "outputDirectory": "public",
-  "devCommand": "npm run web",
-  "framework": null
-}
