@@ -1,5 +1,10 @@
 {
+  "version": 2,
   "builds": [
+    {
+      "src": "backend/api/index.ts",
+      "use": "@vercel/node"
+    },
     {
       "src": "web-build/**",
       "use": "@vercel/static"
@@ -7,9 +12,12 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "/backend/api/index.ts"
+    },
+    {
       "src": "/(.*)",
       "dest": "/web-build/$1"
     }
-  ],
-  "outputDirectory": "web-build"
+  ]
 }
