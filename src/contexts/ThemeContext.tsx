@@ -13,10 +13,11 @@ interface ThemeProviderProps {
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const systemColorScheme = useColorScheme();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     loadStoredTheme();
-  }, []);
+  }, []); // Empty dependency array to run only once
 
   const loadStoredTheme = async () => {
     try {
@@ -24,11 +25,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       if (storedTheme && ['light', 'dark'].includes(storedTheme)) {
         setTheme(storedTheme as 'light' | 'dark');
       } else {
-        // Use system theme if available
-        setTheme(systemColorScheme === 'dark' ? 'dark' : 'light');
+        // Use system theme if available, fallback to light
+        const defaultTheme = systemColorScheme === 'dark' ? 'dark' : 'light';
+        setTheme(defaultTheme);
       }
     } catch (error) {
       console.error('Error loading stored theme:', error);
+      setTheme('light'); // Fallback to light theme
+    } finally {
+      setIsInitialized(true);
     }
   };
 
@@ -49,6 +54,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     toggleTheme,
     colors,
   };
+
+  // Don't render children until theme is initialized to prevent flashing
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
     <ThemeContext.Provider value={value}>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContextType, User } from '../types';
 import { apiService } from '../services/api';
@@ -17,17 +17,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     loadStoredAuth();
-  }, []);
+  }, []); // Empty dependency array to run only once
 
   const loadStoredAuth = async () => {
     try {
       // Clear stored auth since we recreated the database with new user IDs
-      console.log('🔍 Clearing stored auth due to database reset');
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('user');
       apiService.setAuthToken(null);
     } catch (error) {
-      console.error('Error loading stored auth:', error);
+      // Silent error handling to prevent infinite loops
     } finally {
       setLoading(false);
     }
@@ -56,7 +55,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error('Login error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -86,26 +84,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error('Admin login error:', error);
       throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
+      // Set loading to true to prevent navigation race conditions
+      setLoading(true);
+      
+      // Clear API token first to prevent any ongoing requests
+      apiService.setAuthToken(null);
+      
+      // Clear AsyncStorage in parallel
+      await Promise.all([
+        AsyncStorage.removeItem('authToken'),
+        AsyncStorage.removeItem('user')
+      ]);
+      
+      // Clear state after everything else is done
       setUser(null);
       setToken(null);
       
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('user');
-      
-      apiService.setAuthToken(null);
     } catch (error) {
-      console.error('Logout error:', error);
+      // Silent error handling
+    } finally {
+      // Small delay to ensure state updates are processed
+      setTimeout(() => {
+        setLoading(false);
+      }, 100);
     }
-  };
+  }, []);
 
   const value: AuthContextType = {
     user,

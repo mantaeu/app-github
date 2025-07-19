@@ -40,7 +40,7 @@ export const LoginScreen: React.FC = () => {
 
   const handleUserLogin = async () => {
     if (!idCardNumber) {
-      Alert.alert(t('error'), 'Please enter your ID card number');
+      Alert.alert(t('error'), t('enterIdCardNumber'));
       return;
     }
 
@@ -51,7 +51,7 @@ export const LoginScreen: React.FC = () => {
       console.log('✅ User login successful');
     } catch (error) {
       console.log('❌ User login failed:', error);
-      Alert.alert(t('error'), 'Invalid ID card number');
+      Alert.alert(t('error'), t('loginError'));
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export const LoginScreen: React.FC = () => {
 
   const handleAdminLogin = async () => {
     if (!email || !password) {
-      Alert.alert(t('error'), 'Please enter both email and password');
+      Alert.alert(t('error'), t('nameAndEmailRequired'));
       return;
     }
 
@@ -70,7 +70,7 @@ export const LoginScreen: React.FC = () => {
       console.log('✅ Admin login successful');
     } catch (error) {
       console.log('❌ Admin login failed:', error);
-      Alert.alert(t('error'), 'Invalid email or password');
+      Alert.alert(t('error'), t('loginError'));
     } finally {
       setLoading(false);
     }
@@ -111,7 +111,7 @@ export const LoginScreen: React.FC = () => {
                 styles.tabText,
                 { color: loginType === 'user' ? '#fff' : colors.primary }
               ]}>
-                Employee
+                {t('employee')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -126,7 +126,7 @@ export const LoginScreen: React.FC = () => {
                 styles.tabText,
                 { color: loginType === 'admin' ? '#fff' : colors.primary }
               ]}>
-                Admin
+                {t('admin')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -135,17 +135,17 @@ export const LoginScreen: React.FC = () => {
             // User Login Form
             <View style={styles.formContainer}>
               <ThemedTextInput
-                label="ID Card Number"
+                label={t('idCardNumber')}
                 value={idCardNumber}
                 onChangeText={setIdCardNumber}
                 keyboardType="default"
                 autoCapitalize="none"
                 autoCorrect={false}
-                placeholder="Enter your ID card number"
+                placeholder={t('enterIdCardNumber')}
               />
 
               <ThemedButton
-                title="Login"
+                title={t('login')}
                 onPress={handleUserLogin}
                 loading={loading}
                 style={styles.loginButton}
@@ -155,27 +155,27 @@ export const LoginScreen: React.FC = () => {
             // Admin Login Form
             <View style={styles.formContainer}>
               <ThemedTextInput
-                label="Email"
+                label={t('email')}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
-                placeholder="Enter your email"
+                placeholder={t('enterEmailAddress')}
               />
 
               <ThemedTextInput
-                label="Password"
+                label={t('password')}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
-                placeholder="Enter your password"
+                placeholder={t('enterPassword')}
               />
 
               <ThemedButton
-                title="Login as Admin"
+                title={t('loginAsAdmin')}
                 onPress={handleAdminLogin}
                 loading={loading}
                 style={styles.loginButton}

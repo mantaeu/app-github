@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
-  Modal,
-  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -16,6 +14,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { ThemedButton } from '../components/ThemedButton';
+import { UserFormModal } from '../components/UserFormModal';
 import { apiService } from '../services/api';
 import { User } from '../types';
 
@@ -25,16 +24,6 @@ export const UsersScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    idCardNumber: '',
-    role: 'worker' as 'worker' | 'admin',
-    position: '',
-    salary: '',
-    hourlyRate: '',
-    phone: '',
-    address: '',
-  });
 
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
@@ -106,216 +95,28 @@ export const UsersScreen: React.FC = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      idCardNumber: '',
-      role: 'worker' as 'worker' | 'admin',
-      position: '',
-      salary: '',
-      hourlyRate: '',
-      phone: '',
-      address: '',
-    });
+  const openAddUserModal = useCallback(() => {
     setEditingUser(null);
-  };
-
-  const openAddUserModal = () => {
-    resetForm();
     setShowUserModal(true);
-  };
+  }, []);
 
-  const openEditUserModal = (user: User) => {
-    setFormData({
-      name: user.name,
-      idCardNumber: user.idCardNumber,
-      role: user.role,
-      position: user.position || '',
-      salary: user.salary?.toString() || '',
-      hourlyRate: user.hourlyRate?.toString() || '',
-      phone: user.phone || '',
-      address: user.address || '',
-    });
+  const openEditUserModal = useCallback((user: User) => {
     setEditingUser(user);
     setShowUserModal(true);
-  };
+  }, []);
 
-  const handleSaveUser = async () => {
-    if (!formData.name.trim() || !formData.idCardNumber.trim()) {
-      Alert.alert(t('error'), 'Name and ID card number are required');
-      return;
-    }
+  const closeModal = useCallback(() => {
+    setShowUserModal(false);
+    setEditingUser(null);
+  }, []);
 
-    try {
-      const userData = {
-        name: formData.name.trim(),
-        idCardNumber: formData.idCardNumber.trim(),
-        role: formData.role,
-        position: formData.position.trim() || undefined,
-        salary: formData.salary ? parseFloat(formData.salary) : undefined,
-        hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
-        phone: formData.phone.trim() || undefined,
-        address: formData.address.trim() || undefined,
-      };
+  const handleModalSave = useCallback(() => {
+    setShowUserModal(false);
+    setEditingUser(null);
+    loadUsers(); // Reload users after save
+  }, []);
 
-      let response;
-      if (editingUser) {
-        response = await apiService.updateUser(editingUser._id, userData);
-      } else {
-        response = await apiService.createUser(userData);
-      }
-
-      if (response.success) {
-        Alert.alert(t('success'), editingUser ? t('userUpdatedSuccessfully') : t('userCreatedSuccessfully'));
-        setShowUserModal(false);
-        resetForm();
-        loadUsers();
-      } else {
-        Alert.alert(t('error'), response.error || t('failedToSaveUser'));
-      }
-    } catch (error) {
-      console.error('Error saving user:', error);
-      Alert.alert(t('error'), t('failedToSaveUser'));
-    }
-  };
-
-  const UserFormModal = () => (
-    <Modal
-      visible={showUserModal}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={() => setShowUserModal(false)}
-    >
-      <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setShowUserModal(false)}>
-            <Ionicons name="close" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.modalTitle, { color: colors.text }]}>
-            {editingUser ? t('editUser') : t('addUser')}
-          </Text>
-          <TouchableOpacity onPress={handleSaveUser}>
-            <Text style={[styles.saveButton, { color: colors.primary }]}>{t('save')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.modalContent}>
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>{t('name')} *</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-              value={formData.name}
-              onChangeText={(text) => setFormData({ ...formData, name: text })}
-              placeholder={t('enterFullName')}
-              placeholderTextColor={colors.secondary}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>ID Card Number *</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-              value={formData.idCardNumber}
-              onChangeText={(text) => setFormData({ ...formData, idCardNumber: text })}
-              placeholder="Enter ID card number"
-              placeholderTextColor={colors.secondary}
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>{t('role')}</Text>
-            <View style={styles.roleContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.roleButton,
-                  { backgroundColor: formData.role === 'worker' ? colors.primary : colors.card },
-                ]}
-                onPress={() => setFormData({ ...formData, role: 'worker' })}
-              >
-                <Text style={[styles.roleText, { color: formData.role === 'worker' ? '#ffffff' : colors.text }]}>
-                  {t('worker')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.roleButton,
-                  { backgroundColor: formData.role === 'admin' ? colors.primary : colors.card },
-                ]}
-                onPress={() => setFormData({ ...formData, role: 'admin' })}
-              >
-                <Text style={[styles.roleText, { color: formData.role === 'admin' ? '#ffffff' : colors.text }]}>
-                  {t('admin')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>{t('position')}</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-              value={formData.position}
-              onChangeText={(text) => setFormData({ ...formData, position: text })}
-              placeholder={t('enterJobPosition')}
-              placeholderTextColor={colors.secondary}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>{t('monthlySalary')}</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-              value={formData.salary}
-              onChangeText={(text) => setFormData({ ...formData, salary: text })}
-              placeholder={t('enterMonthlySalary')}
-              placeholderTextColor={colors.secondary}
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>{t('hourlyRate')}</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-              value={formData.hourlyRate}
-              onChangeText={(text) => setFormData({ ...formData, hourlyRate: text })}
-              placeholder={t('enterHourlyRate')}
-              placeholderTextColor={colors.secondary}
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>{t('phone')}</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-              value={formData.phone}
-              onChangeText={(text) => setFormData({ ...formData, phone: text })}
-              placeholder={t('enterPhoneNumber')}
-              placeholderTextColor={colors.secondary}
-              keyboardType="phone-pad"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>{t('address')}</Text>
-            <TextInput
-              style={[styles.input, styles.textArea, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-              value={formData.address}
-              onChangeText={(text) => setFormData({ ...formData, address: text })}
-              placeholder={t('enterAddress')}
-              placeholderTextColor={colors.secondary}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-
-  const UserCard: React.FC<{ user: User }> = ({ user }) => (
+  const UserCard: React.FC<{ user: User }> = React.memo(({ user }) => (
     <ThemedCard style={styles.userCard}>
       <View style={styles.userHeader}>
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
@@ -366,7 +167,7 @@ export const UsersScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
     </ThemedCard>
-  );
+  ));
 
   if (currentUser?.role !== 'admin') {
     return (
@@ -403,6 +204,7 @@ export const UsersScreen: React.FC = () => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        keyboardShouldPersistTaps="handled"
       >
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -422,7 +224,12 @@ export const UsersScreen: React.FC = () => {
         )}
       </ScrollView>
 
-      <UserFormModal />
+      <UserFormModal
+        visible={showUserModal}
+        editingUser={editingUser}
+        onClose={closeModal}
+        onSave={handleModalSave}
+      />
     </View>
   );
 };
@@ -547,61 +354,5 @@ const styles = StyleSheet.create({
   accessDeniedSubtext: {
     fontSize: 16,
     marginTop: 8,
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e1e1',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  saveButton: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  roleContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  roleButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  roleText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

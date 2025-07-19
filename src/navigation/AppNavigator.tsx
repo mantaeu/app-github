@@ -13,6 +13,7 @@ export const AppNavigator: React.FC = () => {
   const { user, loading } = useAuth();
   const { colors } = useTheme();
 
+  // Show loading screen during auth state changes
   if (loading) {
     return (
       <View style={{ 
@@ -28,11 +29,23 @@ export const AppNavigator: React.FC = () => {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator 
+        screenOptions={{ 
+          headerShown: false,
+          presentation: 'card',
+          animationTypeForReplace: 'push'
+        }}
+      >
         {user ? (
-          <Stack.Screen name="Main" component={TabNavigator} />
+          <Stack.Screen 
+            name="Main" 
+            component={TabNavigator}
+          />
         ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen 
+            name="Login" 
+            component={LoginScreen}
+          />
         )}
       </Stack.Navigator>
     </NavigationContainer>

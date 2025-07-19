@@ -1,307 +1,268 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Alert,
-  TextInput,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedCard } from '../components/ThemedCard';
-import { ThemedButton } from '../components/ThemedButton';
+
+const { width } = Dimensions.get('window');
 
 export const ProfileScreen: React.FC = () => {
   const { colors } = useTheme();
-  const { t, isRTL } = useLanguage();
-  const { user, logout } = useAuth();
-  
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedUser, setEditedUser] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    address: user?.address || '',
-  });
+  const { t } = useLanguage();
+  const { user } = useAuth();
 
-  const handleSave = () => {
-    // In a real app, you would call an API to update the user
-    Alert.alert(
-      'Profile Updated',
-      'Your profile has been updated successfully.',
-      [{ text: 'OK', onPress: () => setIsEditing(false) }]
-    );
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: logout },
-      ]
-    );
-  };
-
-  const InfoRow: React.FC<{
-    label: string;
-    value: string;
-    icon: string;
-    editable?: boolean;
-    onChangeText?: (text: string) => void;
-  }> = ({ label, value, icon, editable = false, onChangeText }) => (
-    <View style={styles.infoRow}>
-      <View style={styles.infoIcon}>
-        <Ionicons name={icon as any} size={20} color={colors.primary} />
-      </View>
-      <View style={styles.infoContent}>
-        <Text style={[styles.infoLabel, { color: colors.secondary }]}>{label}</Text>
-        {isEditing && editable ? (
-          <TextInput
-            style={[styles.infoInput, { color: colors.text, borderColor: colors.border }]}
-            value={value}
-            onChangeText={onChangeText}
-            placeholder={label}
-            placeholderTextColor={colors.secondary}
-          />
-        ) : (
-          <Text style={[styles.infoValue, { color: colors.text }]}>{value || 'Not provided'}</Text>
-        )}
+  const ProfileHeader = () => (
+    <View style={styles.profileHeader}>
+      <View style={styles.profileHeaderContent}>
+        <View style={[styles.profileAvatar, { backgroundColor: colors.primary }]}>
+          <Text style={styles.profileAvatarText}>
+            {user?.name?.charAt(0).toUpperCase() || 'U'}
+          </Text>
+        </View>
+        <View style={styles.profileInfo}>
+          <Text style={[styles.profileName, { color: colors.text }]}>
+            {user?.name || 'User'}
+          </Text>
+          <Text style={[styles.profileRole, { color: colors.secondary }]}>
+            {user?.position || t('worker')} • {user?.role === 'admin' ? t('admin') : t('worker')}
+          </Text>
+          <View style={styles.profileBadge}>
+            <View style={[styles.statusDot, { backgroundColor: '#10B981' }]} />
+            <Text style={[styles.statusText, { color: '#10B981' }]}>
+              {user?.isActive ? t('active') : t('inactive')}
+            </Text>
+          </View>
+        </View>
       </View>
     </View>
   );
 
-  const StatCard: React.FC<{
-    title: string;
-    value: string | number;
-    icon: string;
-    color: string;
-  }> = ({ title, value, icon, color }) => (
-    <ThemedCard style={styles.statCard}>
-      <View style={styles.statContent}>
-        <View style={[styles.statIcon, { backgroundColor: color }]}>
-          <Ionicons name={icon as any} size={20} color="#ffffff" />
+  const QuickStatsCard = () => {
+    const StatItem: React.FC<{
+      label: string;
+      value: string;
+      icon: string;
+      color: string;
+    }> = ({ label, value, icon, color }) => (
+      <View style={styles.statItem}>
+        <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
+          <Ionicons name={icon as any} size={20} color={color} />
         </View>
-        <View style={styles.statText}>
+        <View style={styles.statContent}>
           <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-          <Text style={[styles.statTitle, { color: colors.secondary }]}>{title}</Text>
+          <Text style={[styles.statLabel, { color: colors.secondary }]}>{label}</Text>
         </View>
       </View>
-    </ThemedCard>
-  );
+    );
 
-  const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
+    const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
+
+    return (
+      <ThemedCard style={styles.quickStatsCard}>
+        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('quickOverview')}</Text>
+        <View style={styles.statsContainer}>
+          <StatItem
+            label={t('baseSalary')}
+            value={formatCurrency(user?.salary || 0)}
+            icon="card-outline"
+            color="#10B981"
+          />
+          <StatItem
+            label={t('hourlyRate')}
+            value={`$${user?.hourlyRate || 0}/hr`}
+            icon="time-outline"
+            color="#3B82F6"
+          />
+          <StatItem
+            label={t('employeeId')}
+            value={user?.idCardNumber || 'N/A'}
+            icon="id-card-outline"
+            color="#8B5CF6"
+          />
+          <StatItem
+            label={t('joinDate')}
+            value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+            icon="calendar-outline"
+            color="#F59E0B"
+          />
+        </View>
+      </ThemedCard>
+    );
+  };
+
+  const PersonalInfoCard = () => {
+    const InfoField: React.FC<{
+      label: string;
+      value: string;
+      icon: string;
+    }> = ({ label, value, icon }) => (
+      <View style={styles.infoField}>
+        <View style={styles.infoFieldHeader}>
+          <View style={[styles.infoFieldIcon, { backgroundColor: colors.primary + '15' }]}>
+            <Ionicons name={icon as any} size={18} color={colors.primary} />
+          </View>
+          <Text style={[styles.infoFieldLabel, { color: colors.secondary }]}>{label}</Text>
+        </View>
+        <Text style={[styles.infoFieldValue, { color: colors.text }]}>
+          {value || t('notProvided')}
+        </Text>
+      </View>
+    );
+
+    return (
+      <ThemedCard style={styles.personalInfoCard}>
+        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('personalInformation')}</Text>
+        <View style={styles.infoFieldsContainer}>
+          <InfoField
+            label={t('fullName')}
+            value={user?.name || ''}
+            icon="person-outline"
+          />
+          <InfoField
+            label={t('idCardNumber')}
+            value={user?.idCardNumber || t('notAssigned')}
+            icon="id-card-outline"
+          />
+          <InfoField
+            label={t('phoneNumber')}
+            value={user?.phone || t('notProvided')}
+            icon="call-outline"
+          />
+          <InfoField
+            label={t('address')}
+            value={user?.address || t('notProvided')}
+            icon="location-outline"
+          />
+          <InfoField
+            label={t('position')}
+            value={user?.position || t('notAssigned')}
+            icon="briefcase-outline"
+          />
+          <InfoField
+            label={t('department')}
+            value={t('general')}
+            icon="business-outline"
+          />
+        </View>
+      </ThemedCard>
+    );
+  };
+
+  const WorkInfoCard = () => {
+    const WorkInfoItem: React.FC<{
+      label: string;
+      value: string;
+      icon: string;
+      color: string;
+    }> = ({ label, value, icon, color }) => (
+      <View style={styles.workInfoItem}>
+        <View style={[styles.workInfoIcon, { backgroundColor: color + '15' }]}>
+          <Ionicons name={icon as any} size={18} color={color} />
+        </View>
+        <View style={styles.workInfoContent}>
+          <Text style={[styles.workInfoLabel, { color: colors.secondary }]}>{label}</Text>
+          <Text style={[styles.workInfoValue, { color: colors.text }]}>{value}</Text>
+        </View>
+      </View>
+    );
+
+    return (
+      <ThemedCard style={styles.workInfoCard}>
+        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('workInformation')}</Text>
+        <View style={styles.workInfoContainer}>
+          <WorkInfoItem
+            label={t('employeeStatus')}
+            value={user?.isActive ? t('active') : t('inactive')}
+            icon="checkmark-circle-outline"
+            color="#10B981"
+          />
+          <WorkInfoItem
+            label={t('role')}
+            value={user?.role === 'admin' ? t('admin') : t('worker')}
+            icon="person-circle-outline"
+            color="#3B82F6"
+          />
+          <WorkInfoItem
+            label={t('workSchedule')}
+            value={t('mondayFriday')}
+            icon="time-outline"
+            color="#8B5CF6"
+          />
+          <WorkInfoItem
+            label={t('workLocation')}
+            value={t('mainOffice')}
+            icon="location-outline"
+            color="#F59E0B"
+          />
+        </View>
+      </ThemedCard>
+    );
+  };
+
+  const CompensationCard = () => {
+    const CompensationItem: React.FC<{
+      label: string;
+      value: string;
+      icon: string;
+      color: string;
+    }> = ({ label, value, icon, color }) => (
+      <View style={styles.compensationItem}>
+        <View style={[styles.compensationIcon, { backgroundColor: color + '15' }]}>
+          <Ionicons name={icon as any} size={20} color={color} />
+        </View>
+        <View style={styles.compensationContent}>
+          <Text style={[styles.compensationLabel, { color: colors.secondary }]}>{label}</Text>
+          <Text style={[styles.compensationValue, { color: colors.text }]}>{value}</Text>
+        </View>
+      </View>
+    );
+
+    const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
+
+    return (
+      <ThemedCard style={styles.compensationCard}>
+        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('compensationDetails')}</Text>
+        <View style={styles.compensationContainer}>
+          <CompensationItem
+            label={t('monthlySalary')}
+            value={formatCurrency(user?.salary || 0)}
+            icon="card-outline"
+            color="#10B981"
+          />
+          <CompensationItem
+            label={t('hourlyRate')}
+            value={`$${user?.hourlyRate || 0} ${t('perHour')}`}
+            icon="time-outline"
+            color="#3B82F6"
+          />
+        </View>
+      </ThemedCard>
+    );
+  };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Profile Header */}
-      <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <Text style={styles.avatarText}>
-            {user?.name?.charAt(0).toUpperCase() || 'U'}
-          </Text>
-        </View>
-        <Text style={[styles.userName, { color: colors.text }]}>
-          {user?.name || 'User'}
-        </Text>
-        <Text style={[styles.userRole, { color: colors.secondary }]}>
-          {user?.position || 'Employee'}
-        </Text>
-        <Text style={[styles.userEmail, { color: colors.secondary }]}>
-          {user?.email}
-        </Text>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: colors.background }]}
+      showsVerticalScrollIndicator={false}
+    >
+      <ProfileHeader />
+      
+      <View style={styles.content}>
+        <QuickStatsCard />
+        <PersonalInfoCard />
+        <WorkInfoCard />
+        <CompensationCard />
       </View>
-
-      {/* Quick Stats */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Stats</Text>
-        <View style={styles.statsGrid}>
-          <StatCard
-            title="Base Salary"
-            value={formatCurrency(user?.salary || 0)}
-            icon="card"
-            color={colors.success}
-          />
-          <StatCard
-            title="Hourly Rate"
-            value={`$${user?.hourlyRate || 0}/hr`}
-            icon="time"
-            color={colors.primary}
-          />
-          <StatCard
-            title="Employee ID"
-            value={user?._id?.slice(-6).toUpperCase() || 'N/A'}
-            icon="id-card"
-            color={colors.info}
-          />
-          <StatCard
-            title="Join Date"
-            value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-            icon="calendar"
-            color={colors.warning}
-          />
-        </View>
-      </View>
-
-      {/* Personal Information */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Personal Information</Text>
-          <TouchableOpacity
-            onPress={() => {
-              if (isEditing) {
-                handleSave();
-              } else {
-                setIsEditing(true);
-              }
-            }}
-            style={[styles.editButton, { backgroundColor: colors.primary }]}
-          >
-            <Ionicons 
-              name={isEditing ? 'checkmark' : 'create'} 
-              size={16} 
-              color="#ffffff" 
-            />
-            <Text style={styles.editButtonText}>
-              {isEditing ? 'Save' : 'Edit'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <ThemedCard>
-          <InfoRow
-            label="Full Name"
-            value={editedUser.name}
-            icon="person"
-            editable
-            onChangeText={(text) => setEditedUser({ ...editedUser, name: text })}
-          />
-          <InfoRow
-            label="Email Address"
-            value={editedUser.email}
-            icon="mail"
-            editable
-            onChangeText={(text) => setEditedUser({ ...editedUser, email: text })}
-          />
-          <InfoRow
-            label="Phone Number"
-            value={editedUser.phone}
-            icon="call"
-            editable
-            onChangeText={(text) => setEditedUser({ ...editedUser, phone: text })}
-          />
-          <InfoRow
-            label="Address"
-            value={editedUser.address}
-            icon="location"
-            editable
-            onChangeText={(text) => setEditedUser({ ...editedUser, address: text })}
-          />
-          <InfoRow
-            label="Position"
-            value={user?.position || 'Not assigned'}
-            icon="briefcase"
-          />
-          <InfoRow
-            label="Department"
-            value="General"
-            icon="business"
-          />
-        </ThemedCard>
-      </View>
-
-      {/* Work Information */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Work Information</Text>
-        <ThemedCard>
-          <InfoRow
-            label="Employee Status"
-            value={user?.isActive ? 'Active' : 'Inactive'}
-            icon="checkmark-circle"
-          />
-          <InfoRow
-            label="Work Schedule"
-            value="Monday - Friday, 9:00 AM - 5:30 PM"
-            icon="time"
-          />
-          <InfoRow
-            label="Reporting Manager"
-            value="Admin User"
-            icon="person-circle"
-          />
-          <InfoRow
-            label="Work Location"
-            value="Main Office"
-            icon="location"
-          />
-        </ThemedCard>
-      </View>
-
-      {/* Account Actions */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Account Actions</Text>
-        <View style={styles.actionsGrid}>
-          <TouchableOpacity style={styles.actionItem}>
-            <ThemedCard style={styles.actionCard}>
-              <Ionicons name="key" size={24} color={colors.warning} />
-              <Text style={[styles.actionText, { color: colors.text }]}>
-                Change Password
-              </Text>
-            </ThemedCard>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionItem}>
-            <ThemedCard style={styles.actionCard}>
-              <Ionicons name="notifications" size={24} color={colors.info} />
-              <Text style={[styles.actionText, { color: colors.text }]}>
-                Notifications
-              </Text>
-            </ThemedCard>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionItem}>
-            <ThemedCard style={styles.actionCard}>
-              <Ionicons name="help-circle" size={24} color={colors.primary} />
-              <Text style={[styles.actionText, { color: colors.text }]}>
-                Help & Support
-              </Text>
-            </ThemedCard>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionItem} onPress={handleLogout}>
-            <ThemedCard style={styles.actionCard}>
-              <Ionicons name="log-out" size={24} color={colors.error} />
-              <Text style={[styles.actionText, { color: colors.text }]}>
-                Logout
-              </Text>
-            </ThemedCard>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Cancel Edit Button */}
-      {isEditing && (
-        <View style={styles.section}>
-          <ThemedButton
-            title="Cancel"
-            onPress={() => {
-              setIsEditing(false);
-              setEditedUser({
-                name: user?.name || '',
-                email: user?.email || '',
-                phone: user?.phone || '',
-                address: user?.address || '',
-              });
-            }}
-            variant="outline"
-          />
-        </View>
-      )}
+      
+      <View style={styles.bottomPadding} />
     </ScrollView>
   );
 };
@@ -310,143 +271,243 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    alignItems: 'center',
-    padding: 20,
-    paddingBottom: 30,
+  
+  // Profile Header
+  profileHeader: {
+    padding: 24,
+    paddingBottom: 32,
   },
-  avatar: {
+  profileHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileAvatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginRight: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  avatarText: {
+  profileAvatarText: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#ffffff',
+    letterSpacing: -1,
   },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 28,
+    fontWeight: '700',
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
-  userRole: {
+  profileRole: {
     fontSize: 16,
-    marginBottom: 4,
+    marginBottom: 8,
+    opacity: 0.8,
   },
-  userEmail: {
-    fontSize: 14,
-  },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  editButton: {
+  profileBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
   },
-  editButtonText: {
-    color: '#ffffff',
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
     fontSize: 14,
     fontWeight: '600',
-    marginLeft: 4,
   },
-  statsGrid: {
+
+  // Content
+  content: {
+    paddingHorizontal: 20,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 20,
+    letterSpacing: -0.3,
+  },
+
+  // Quick Stats Card
+  quickStatsCard: {
+    padding: 24,
+    marginBottom: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -6,
+    marginHorizontal: -8,
   },
-  statCard: {
-    width: '48%',
-    marginHorizontal: 6,
-    marginBottom: 12,
-  },
-  statContent: {
+  statItem: {
+    width: (width - 80) / 2,
+    marginHorizontal: 8,
+    marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
   statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  statContent: {
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 2,
+    letterSpacing: -0.3,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    opacity: 0.8,
+  },
+
+  // Personal Info Card
+  personalInfoCard: {
+    padding: 24,
+    marginBottom: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  infoFieldsContainer: {
+    gap: 20,
+  },
+  infoField: {
+    gap: 12,
+  },
+  infoFieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoFieldIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoFieldLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    opacity: 0.8,
+  },
+  infoFieldValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 44,
+  },
+
+  // Work Info Card
+  workInfoCard: {
+    padding: 24,
+    marginBottom: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  workInfoContainer: {
+    gap: 16,
+  },
+  workInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  workInfoIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 16,
   },
-  statText: {
+  workInfoContent: {
     flex: 1,
   },
-  statValue: {
+  workInfoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+    opacity: 0.8,
+  },
+  workInfoValue: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '500',
   },
-  statTitle: {
-    fontSize: 12,
-    marginTop: 2,
+
+  // Compensation Card
+  compensationCard: {
+    padding: 24,
+    marginBottom: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  infoRow: {
+  compensationContainer: {
+    gap: 16,
+  },
+  compensationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
-  infoIcon: {
+  compensationIcon: {
     width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 16,
   },
-  infoContent: {
+  compensationContent: {
     flex: 1,
-    marginLeft: 12,
   },
-  infoLabel: {
-    fontSize: 12,
-    marginBottom: 4,
+  compensationLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+    opacity: 0.8,
   },
-  infoValue: {
-    fontSize: 16,
+  compensationValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
-  infoInput: {
-    fontSize: 16,
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -6,
-  },
-  actionItem: {
-    width: '48%',
-    marginHorizontal: 6,
-    marginBottom: 12,
-  },
-  actionCard: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  actionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 8,
-    textAlign: 'center',
+
+  bottomPadding: {
+    height: 20,
   },
 });

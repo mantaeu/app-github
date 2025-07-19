@@ -17,15 +17,15 @@ interface LanguageProviderProps {
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>('en');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     loadStoredLanguage();
-  }, []);
+  }, []); // Empty dependency array to run only once
 
   const loadStoredLanguage = async () => {
     try {
       const storedLanguage = await AsyncStorage.getItem('app_language');
-      console.log('📱 Loaded stored language:', storedLanguage);
       
       if (storedLanguage && (storedLanguage === 'en' || storedLanguage === 'fr' || storedLanguage === 'ar')) {
         setLanguageState(storedLanguage as Language);
@@ -34,19 +34,19 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
         setLanguageState('en');
       }
     } catch (error) {
-      console.error('Error loading stored language:', error);
+      // Fallback to English on error
       setLanguageState('en');
+    } finally {
+      setIsInitialized(true);
     }
   };
 
   const setLanguage = async (lang: Language) => {
     try {
-      console.log('🌐 Setting language to:', lang);
       setLanguageState(lang);
       await AsyncStorage.setItem('app_language', lang);
-      console.log('💾 Language saved to storage:', lang);
     } catch (error) {
-      console.error('Error storing language:', error);
+      // Silent error handling to prevent infinite loops
     }
   };
 
@@ -57,11 +57,8 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       if (!translation) {
         // Fallback to English if translation not found
         translation = translations.en[key];
-        if (translation) {
-          console.warn(`Translation missing for key "${key}" in language "${language}", using English fallback`);
-        } else {
+        if (!translation) {
           // Return the key itself if no translation found
-          console.warn(`Translation missing for key "${key}" in all languages`);
           return key;
         }
       }
@@ -77,7 +74,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       
       return translation || key;
     } catch (error) {
-      console.error('Error getting translation for key:', key, error);
+      // Return key on error to prevent crashes
       return key;
     }
   };
@@ -90,6 +87,11 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     t,
     isRTL,
   };
+
+  // Don't render children until language is initialized
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
     <LanguageContext.Provider value={value}>
