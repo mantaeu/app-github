@@ -34,10 +34,10 @@ const checkStatus = async () => {
 
     // Check Users/Workers
     const userCount = await User.countDocuments();
-    const users = await User.find({}, 'email name role position salary').limit(5);
+    const users = await User.find({}, 'idCardNumber name role position salary').limit(5);
     console.log(`\n👥 WORKERS: ${userCount} total`);
     users.forEach(user => {
-      console.log(`   - ${user.name} (${user.email}) - ${user.position} - $${user.salary}`);
+      console.log(`   - ${user.name} (ID: ${user.idCardNumber}) - ${user.position} - $${user.salary}`);
     });
 
     // Check Attendance
@@ -110,7 +110,7 @@ const checkStatus = async () => {
     console.log('Admin: admin@mantaevert.com / admin123');
     if (users.length > 0) {
       users.forEach(user => {
-        console.log(`Worker: ${user.email} / worker123`);
+        console.log(`Worker: ${user.idCardNumber} (ID card login)`);
       });
     }
 

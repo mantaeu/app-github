@@ -38,26 +38,8 @@ router.post('/login', [
 
     const { idCardNumber } = req.body;
 
-    // Try to find user in users collection by ID card number
-    let user = await User.findOne({ idCardNumber, isActive: true });
-    let isAdmin = false;
-    
-    if (!user) {
-      // If not found, try admins collection (admins still use email/password)
-      user = await Admin.findOne({ email: idCardNumber, isActive: true });
-      isAdmin = !!user;
-      
-      // For admin login, we still need to check password if provided
-      if (user && req.body.password) {
-        const isPasswordValid = await user.comparePassword(req.body.password);
-        if (!isPasswordValid) {
-          return res.status(401).json({
-            success: false,
-            message: 'Invalid credentials',
-          });
-        }
-      }
-    }
+    // Find user by ID card number
+    const user = await User.findOne({ idCardNumber, isActive: true });
     
     if (!user) {
       return res.status(401).json({
@@ -66,15 +48,13 @@ router.post('/login', [
       });
     }
 
-    // For regular users, ID card number is both username and password
-    if (!isAdmin) {
-      const isIdCardValid = await user.compareIdCard(idCardNumber);
-      if (!isIdCardValid) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid ID card number',
-        });
-      }
+    // For users, ID card number is both username and password
+    const isIdCardValid = await user.compareIdCard(idCardNumber);
+    if (!isIdCardValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid ID card number',
+      });
     }
 
     // Generate token
@@ -83,7 +63,7 @@ router.post('/login', [
     res.json({
       success: true,
       data: {
-        user: { ...user.toObject(), role: isAdmin ? 'admin' : user.role || 'worker' },
+        user: { ...user.toObject(), role: user.role || 'worker' },
         token,
       },
     });
@@ -148,8 +128,7 @@ router.post('/admin-login', [
 // @desc    Register new user (admin only)
 // @access  Private/Admin
 router.post('/register', [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
+  body('idCardNumber').trim().isLength({ min: 1 }).withMessage('ID card number is required'),
   body('name').trim().isLength({ min: 2 }),
   body('role').isIn(['admin', 'worker']),
 ], authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -171,21 +150,20 @@ router.post('/register', [
       });
     }
 
-    const { email, password, name, role, phone, address, position, salary, hourlyRate } = req.body;
+    const { idCardNumber, name, role, phone, address, position, salary, hourlyRate } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Check if user already exists with this ID card number
+    const existingUser = await User.findOne({ idCardNumber });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'User already exists with this email',
+        message: 'User already exists with this ID card number',
       });
     }
 
     // Create new user
     const user = new User({
-      email,
-      password,
+      idCardNumber,
       name,
       role,
       phone,
@@ -221,13 +199,21 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response, next: Ne
 });
 
 // @route   PUT /api/auth/change-password
-// @desc    Change user password
+// @desc    Change user password (only for admins)
 // @access  Private
 router.put('/change-password', [
   body('currentPassword').isLength({ min: 6 }),
   body('newPassword').isLength({ min: 6 }),
 ], authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
+    // Only admins can change passwords
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only admins can change passwords.',
+      });
+    }
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -238,10 +224,18 @@ router.put('/change-password', [
     }
 
     const { currentPassword, newPassword } = req.body;
-    const user = req.user!;
+
+    // Find the admin user
+    const admin = await Admin.findById(req.user._id);
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin not found',
+      });
+    }
 
     // Verify current password
-    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+    const isCurrentPasswordValid = await admin.comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
         success: false,
@@ -250,8 +244,8 @@ router.put('/change-password', [
     }
 
     // Update password
-    user.password = newPassword;
-    await user.save();
+    admin.password = newPassword;
+    await admin.save();
 
     res.json({
       success: true,
