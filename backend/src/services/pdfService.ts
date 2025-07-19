@@ -1,4 +1,5 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import path from 'path';
 import fs from 'fs';
 import { User } from '../models/User';
@@ -11,9 +12,13 @@ export class PDFService {
 
   private static async getBrowser(): Promise<Browser> {
     if (!this.browser) {
+      const executablePath = await chromium.executablePath();
       this.browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath,
+        headless: chromium.headless,
+        ignoreHTTPSErrors: true,
       });
     }
     return this.browser;

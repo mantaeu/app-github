@@ -8,7 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "if not exist public mkdir public && if exist web-build (xcopy web-build\\* public\\ /E /Y) else (echo web-build not found, creating placeholder && echo ^<h1^>App Building...^</h1^> > public\\index.html)",
-    "build": "cd backend && npm run build",
+    "build": "cd backend && npm install && npm run build",
      "backend": "cd backend && npm start",
     "backend:dev": "cd backend && npm run dev",
     "predeploy": "npm run web:build",
