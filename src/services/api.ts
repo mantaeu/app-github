@@ -41,10 +41,7 @@ class ApiService {
         };
       }
 
-      return {
-        success: true,
-        data,
-      };
+      return data;
     } catch (error) {
       console.error('API request error:', error);
       return {
