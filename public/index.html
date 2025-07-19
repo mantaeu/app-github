@@ -200,17 +200,19 @@
                 });
                 
                 const data = await response.json();
+                console.log('Login response:', data); // Debug log
                 
-                if (response.ok && data.user) {
-                    messageDiv.innerHTML = '<div class="success">✅ Login successful! Welcome ' + data.user.name + '</div>';
+                if (response.ok && data.success && data.data) {
+                    const { user, token } = data.data;
+                    messageDiv.innerHTML = '<div class="success">✅ Login successful! Welcome ' + user.name + '</div>';
                     
                     // Store token and redirect to dashboard
-                    localStorage.setItem('authToken', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
+                    localStorage.setItem('authToken', token);
+                    localStorage.setItem('user', JSON.stringify(user));
                     
                     setTimeout(() => {
                         // Create a simple dashboard
-                        showDashboard(data.user);
+                        showDashboard(user);
                     }, 1000);
                 } else {
                     messageDiv.innerHTML = '<div class="error">❌ ' + (data.message || 'Login failed') + '</div>';
