@@ -40,11 +40,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (response.success && response.data) {
         // The backend returns { success: true, data: { user, token } }
-        // So response.data contains the entire backend response
-        const backendData = response.data;
+        const { user: userData, token: authToken } = response.data;
         
-        if (backendData.data && backendData.data.user && backendData.data.token) {
-          const { user: userData, token: authToken } = backendData.data;
+        if (userData && authToken) {
           setUser(userData);
           setToken(authToken);
           await AsyncStorage.setItem('authToken', authToken);
@@ -54,7 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           throw new Error('Invalid response structure: missing user or token');
         }
       } else {
-        const errorMessage = response.message || response.error || 'Login failed';
+        const errorMessage = response.error || 'Login failed';
         throw new Error(errorMessage);
       }
     } catch (error) {
