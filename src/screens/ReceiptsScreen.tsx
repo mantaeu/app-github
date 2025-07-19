@@ -64,7 +64,7 @@ export const ReceiptsScreen: React.FC = () => {
     } catch (error) {
       console.error('Error loading receipts:', error);
       setReceipts([]);
-      Alert.alert(t('error'), 'Failed to load receipts');
+      Alert.alert(t('error'), t('failedToLoadReceipts'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -96,10 +96,10 @@ export const ReceiptsScreen: React.FC = () => {
     try {
       setExporting(true);
       await apiService.exportAllReceiptsPDF();
-      Alert.alert(t('success'), 'Receipts PDF exported successfully!');
+      Alert.alert(t('success'), t('receiptsPDFExported'));
     } catch (error) {
       console.error('Error exporting receipts PDF:', error);
-      Alert.alert(t('error'), 'Failed to export receipts PDF');
+      Alert.alert(t('error'), t('failedToExportReceiptsPDF'));
     } finally {
       setExporting(false);
     }
@@ -109,10 +109,10 @@ export const ReceiptsScreen: React.FC = () => {
     try {
       setDownloadingId(receipt._id);
       await apiService.downloadIndividualReceiptPDF(receipt._id);
-      Alert.alert(t('success'), 'Receipt PDF downloaded successfully!');
+      Alert.alert(t('success'), t('receiptPDFDownloaded'));
     } catch (error) {
       console.error('Error downloading receipt PDF:', error);
-      Alert.alert(t('error'), 'Failed to download receipt PDF');
+      Alert.alert(t('error'), t('failedToDownloadReceiptPDF'));
     } finally {
       setDownloadingId(null);
     }
@@ -134,7 +134,7 @@ export const ReceiptsScreen: React.FC = () => {
 
   const handleCreateReceipt = async () => {
     if (!formData.userId || !formData.amount || !formData.description) {
-      Alert.alert(t('error'), 'Please fill in all required fields');
+      Alert.alert(t('error'), t('fillAllRequiredFields'));
       return;
     }
 
@@ -149,16 +149,16 @@ export const ReceiptsScreen: React.FC = () => {
       const response = await apiService.createReceipt(receiptData);
 
       if (response.success) {
-        Alert.alert(t('success'), 'Receipt created successfully');
+        Alert.alert(t('success'), t('receiptCreatedSuccessfully'));
         setShowCreateModal(false);
         resetForm();
         loadReceipts();
       } else {
-        Alert.alert(t('error'), response.error || 'Failed to create receipt');
+        Alert.alert(t('error'), response.error || t('failedToCreateReceipt'));
       }
     } catch (error) {
       console.error('Error creating receipt:', error);
-      Alert.alert(t('error'), 'Failed to create receipt');
+      Alert.alert(t('error'), t('failedToCreateReceipt'));
     }
   };
 
@@ -183,16 +183,16 @@ export const ReceiptsScreen: React.FC = () => {
             <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.modalTitle, { color: colors.text }]}>
-            Create Receipt
+            {t('createReceipt')}
           </Text>
           <TouchableOpacity onPress={handleCreateReceipt}>
-            <Text style={[styles.saveButton, { color: colors.primary }]}>Create</Text>
+            <Text style={[styles.saveButton, { color: colors.primary }]}>{t('create')}</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.modalContent}>
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>User *</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('user')} *</Text>
             <View style={styles.userSelector}>
               {users.map((userItem) => (
                 <TouchableOpacity
@@ -220,7 +220,7 @@ export const ReceiptsScreen: React.FC = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Type *</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('type')} *</Text>
             <View style={styles.typeContainer}>
               {['payment', 'salary', 'invoice'].map((type) => (
                 <TouchableOpacity
@@ -240,7 +240,9 @@ export const ReceiptsScreen: React.FC = () => {
                       { color: formData.type === type ? '#ffffff' : colors.text },
                     ]}
                   >
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                    {type === 'payment' ? t('payment') : 
+                     type === 'invoice' ? t('invoice') : 
+                     type.charAt(0).toUpperCase() + type.slice(1)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -248,7 +250,7 @@ export const ReceiptsScreen: React.FC = () => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Amount *</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('amount')} *</Text>
             <TextInput
               style={[
                 styles.input,
@@ -256,14 +258,14 @@ export const ReceiptsScreen: React.FC = () => {
               ]}
               value={formData.amount}
               onChangeText={(text) => setFormData({ ...formData, amount: text })}
-              placeholder="Enter amount"
+              placeholder={t('enterAmount')}
               placeholderTextColor={colors.secondary}
               keyboardType="numeric"
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Description *</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('description')} *</Text>
             <TextInput
               style={[
                 styles.input,
@@ -272,7 +274,7 @@ export const ReceiptsScreen: React.FC = () => {
               ]}
               value={formData.description}
               onChangeText={(text) => setFormData({ ...formData, description: text })}
-              placeholder="Enter description"
+              placeholder={t('enterDescription')}
               placeholderTextColor={colors.secondary}
               multiline
               numberOfLines={3}
@@ -299,7 +301,9 @@ export const ReceiptsScreen: React.FC = () => {
             </View>
             <View style={styles.receiptInfo}>
               <Text style={[styles.receiptType, { color: colors.text }]}>
-                {receipt.type.charAt(0).toUpperCase() + receipt.type.slice(1)}
+                {receipt.type === 'payment' ? t('payment') : 
+                 receipt.type === 'invoice' ? t('invoice') : 
+                 receipt.type.charAt(0).toUpperCase() + receipt.type.slice(1)}
               </Text>
               <Text style={[styles.receiptDate, { color: colors.secondary }]}>
                 {formatDate(receipt.date)}
@@ -335,7 +339,7 @@ export const ReceiptsScreen: React.FC = () => {
         {receipt.metadata && (
           <View style={styles.metadata}>
             <Text style={[styles.metadataLabel, { color: colors.secondary }]}>
-              Additional Info:
+              {t('additionalInfo')}:
             </Text>
             <Text style={[styles.metadataValue, { color: colors.text }]}>
               {typeof receipt.metadata === 'object' 
@@ -361,7 +365,7 @@ export const ReceiptsScreen: React.FC = () => {
         {user?.role === 'admin' && (
           <View style={styles.headerButtons}>
             <ThemedButton
-              title="Export PDF"
+              title={t('exportPDF')}
               onPress={handleExportPDF}
               size="small"
               style={styles.exportButton}
@@ -370,7 +374,7 @@ export const ReceiptsScreen: React.FC = () => {
               disabled={exporting}
             />
             <ThemedButton
-              title="Create Receipt"
+              title={t('createReceipt')}
               onPress={openCreateModal}
               size="small"
               style={styles.createButton}
@@ -386,13 +390,13 @@ export const ReceiptsScreen: React.FC = () => {
             <View style={styles.summaryHeader}>
               <Ionicons name="stats-chart" size={24} color={colors.primary} />
               <Text style={[styles.summaryTitle, { color: colors.text }]}>
-                Payment Summary
+                {t('paymentSummary')}
               </Text>
             </View>
             <View style={styles.summaryContent}>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryLabel, { color: colors.secondary }]}>
-                  Total Payments
+                  {t('totalPayments')}
                 </Text>
                 <Text style={[styles.summaryValue, { color: colors.text }]}>
                   {receipts.length}
@@ -400,7 +404,7 @@ export const ReceiptsScreen: React.FC = () => {
               </View>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryLabel, { color: colors.secondary }]}>
-                  Total Amount
+                  {t('totalAmount')}
                 </Text>
                 <Text style={[styles.summaryValue, { color: colors.primary }]}>
                   {formatCurrency(totalAmount)}
@@ -411,7 +415,7 @@ export const ReceiptsScreen: React.FC = () => {
               <View style={styles.typeItem}>
                 <View style={[styles.typeIndicator, { backgroundColor: colors.success }]} />
                 <Text style={[styles.typeText, { color: colors.text }]}>
-                  All payments: {receipts.length}
+                  {t('allPayments')}: {receipts.length}
                 </Text>
               </View>
             </View>
@@ -438,7 +442,7 @@ export const ReceiptsScreen: React.FC = () => {
               {t('noData')}
             </Text>
             <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
-              No payment receipts found
+              {t('noPaymentReceipts')}
             </Text>
           </View>
         ) : (

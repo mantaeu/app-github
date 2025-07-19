@@ -20,13 +20,32 @@ export const SettingsScreen: React.FC = () => {
   const { t, language, setLanguage, isRTL } = useLanguage();
 
   const handleLanguageChange = () => {
+    console.log('🌐 Current language:', language);
     Alert.alert(
       t('language'),
-      'Select Language',
+      'Select Language / Choisir la langue / اختر اللغة',
       [
-        { text: 'English', onPress: () => setLanguage('en') },
-        { text: 'Français', onPress: () => setLanguage('fr') },
-        { text: 'العربية', onPress: () => setLanguage('ar') },
+        { 
+          text: 'English', 
+          onPress: () => {
+            console.log('🇺🇸 Setting language to English');
+            setLanguage('en');
+          }
+        },
+        { 
+          text: 'Français', 
+          onPress: () => {
+            console.log('🇫🇷 Setting language to French');
+            setLanguage('fr');
+          }
+        },
+        { 
+          text: 'العربية', 
+          onPress: () => {
+            console.log('🇸🇦 Setting language to Arabic');
+            setLanguage('ar');
+          }
+        },
         { text: t('cancel'), style: 'cancel' },
       ]
     );
@@ -35,7 +54,7 @@ export const SettingsScreen: React.FC = () => {
   const handleLogout = () => {
     Alert.alert(
       t('logout'),
-      'Are you sure you want to logout?',
+      t('areYouSureLogout'),
       [
         { text: t('cancel'), style: 'cancel' },
         { text: t('logout'), style: 'destructive', onPress: logout },
@@ -100,7 +119,7 @@ export const SettingsScreen: React.FC = () => {
 
       <ThemedCard style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-          Preferences
+          {t('preferences')}
         </Text>
         
         <SettingItem
@@ -120,19 +139,19 @@ export const SettingsScreen: React.FC = () => {
 
       <ThemedCard style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-          Account
+          {t('account')}
         </Text>
         
         <SettingItem
           title={t('profile')}
-          subtitle="Edit your profile information"
+          subtitle={t('editProfileInformation')}
           icon="person"
           onPress={() => {}}
         />
         
         <SettingItem
-          title="Change Password"
-          subtitle="Update your password"
+          title={t('changePassword')}
+          subtitle={t('updatePassword')}
           icon="lock-closed"
           onPress={() => {}}
         />
@@ -140,11 +159,11 @@ export const SettingsScreen: React.FC = () => {
 
       <ThemedCard style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-          About
+          {t('about')}
         </Text>
         
         <SettingItem
-          title="Version"
+          title={t('version')}
           subtitle="1.0.0"
           icon="information-circle"
           onPress={() => {}}
@@ -152,8 +171,8 @@ export const SettingsScreen: React.FC = () => {
         />
         
         <SettingItem
-          title="Support"
-          subtitle="Get help and support"
+          title={t('support')}
+          subtitle={t('getHelpAndSupport')}
           icon="help-circle"
           onPress={() => {}}
         />

@@ -1,6 +1,6 @@
 export interface User {
   _id: string;
-  email: string;
+  idCardNumber: string;
   name: string;
   role: 'admin' | 'worker';
   phone?: string;
@@ -15,16 +15,10 @@ export interface User {
 export interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (idCardNumber: string) => Promise<void>;
+  adminLogin: (email: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
-}
-
-export interface LanguageContextType {
-  language: 'en' | 'fr' | 'ar';
-  setLanguage: (lang: 'en' | 'fr' | 'ar') => void;
-  t: (key: string) => string;
-  isRTL: boolean;
 }
 
 export interface ThemeContextType {
@@ -38,6 +32,10 @@ export interface ThemeContextType {
     accent: string;
     border: string;
     card: string;
+    success: string;
+    warning: string;
+    error: string;
+    info: string;
   };
 }
 

@@ -27,9 +27,8 @@ export const UsersScreen: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    password: '',
-    role: 'worker',
+    idCardNumber: '',
+    role: 'worker' as 'worker' | 'admin',
     position: '',
     salary: '',
     hourlyRate: '',
@@ -67,7 +66,7 @@ export const UsersScreen: React.FC = () => {
     } catch (error) {
       console.error('Error loading users:', error);
       setUsers([]); // Set empty array on error
-      Alert.alert(t('error'), 'Failed to load users');
+      Alert.alert(t('error'), t('failedToLoadUsers'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -82,7 +81,7 @@ export const UsersScreen: React.FC = () => {
   const handleDeleteUser = (userId: string, userName: string) => {
     Alert.alert(
       t('deleteUser'),
-      `Are you sure you want to delete ${userName}?`,
+      `${t('areYouSureDeleteUser')} ${userName}?`,
       [
         { text: t('cancel'), style: 'cancel' },
         {
@@ -99,20 +98,19 @@ export const UsersScreen: React.FC = () => {
       const response = await apiService.deleteUser(userId);
       if (response.success) {
         setUsers(Array.isArray(users) ? users.filter(user => user._id !== userId) : []);
-        Alert.alert(t('success'), 'User deleted successfully');
+        Alert.alert(t('success'), t('userDeletedSuccessfully'));
       }
     } catch (error) {
       console.error('Error deleting user:', error);
-      Alert.alert(t('error'), 'Failed to delete user');
+      Alert.alert(t('error'), t('failedToDeleteUser'));
     }
   };
 
   const resetForm = () => {
     setFormData({
       name: '',
-      email: '',
-      password: '',
-      role: 'worker',
+      idCardNumber: '',
+      role: 'worker' as 'worker' | 'admin',
       position: '',
       salary: '',
       hourlyRate: '',
@@ -130,8 +128,7 @@ export const UsersScreen: React.FC = () => {
   const openEditUserModal = (user: User) => {
     setFormData({
       name: user.name,
-      email: user.email,
-      password: '',
+      idCardNumber: user.idCardNumber,
       role: user.role,
       position: user.position || '',
       salary: user.salary?.toString() || '',
@@ -144,47 +141,41 @@ export const UsersScreen: React.FC = () => {
   };
 
   const handleSaveUser = async () => {
-    if (!formData.name.trim() || !formData.email.trim()) {
-      Alert.alert(t('error'), 'Name and email are required');
-      return;
-    }
-
-    if (!editingUser && !formData.password.trim()) {
-      Alert.alert(t('error'), 'Password is required for new users');
+    if (!formData.name.trim() || !formData.idCardNumber.trim()) {
+      Alert.alert(t('error'), 'Name and ID card number are required');
       return;
     }
 
     try {
       const userData = {
         name: formData.name.trim(),
-        email: formData.email.trim(),
+        idCardNumber: formData.idCardNumber.trim(),
         role: formData.role,
         position: formData.position.trim() || undefined,
         salary: formData.salary ? parseFloat(formData.salary) : undefined,
         hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
         phone: formData.phone.trim() || undefined,
         address: formData.address.trim() || undefined,
-        ...(formData.password.trim() && { password: formData.password }),
       };
 
       let response;
       if (editingUser) {
         response = await apiService.updateUser(editingUser._id, userData);
       } else {
-        response = await apiService.createUser({ ...userData, password: formData.password });
+        response = await apiService.createUser(userData);
       }
 
       if (response.success) {
-        Alert.alert(t('success'), editingUser ? 'User updated successfully' : 'User created successfully');
+        Alert.alert(t('success'), editingUser ? t('userUpdatedSuccessfully') : t('userCreatedSuccessfully'));
         setShowUserModal(false);
         resetForm();
         loadUsers();
       } else {
-        Alert.alert(t('error'), response.error || 'Failed to save user');
+        Alert.alert(t('error'), response.error || t('failedToSaveUser'));
       }
     } catch (error) {
       console.error('Error saving user:', error);
-      Alert.alert(t('error'), 'Failed to save user');
+      Alert.alert(t('error'), t('failedToSaveUser'));
     }
   };
 
@@ -201,54 +192,39 @@ export const UsersScreen: React.FC = () => {
             <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.modalTitle, { color: colors.text }]}>
-            {editingUser ? 'Edit User' : 'Add User'}
+            {editingUser ? t('editUser') : t('addUser')}
           </Text>
           <TouchableOpacity onPress={handleSaveUser}>
-            <Text style={[styles.saveButton, { color: colors.primary }]}>Save</Text>
+            <Text style={[styles.saveButton, { color: colors.primary }]}>{t('save')}</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.modalContent}>
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Name *</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('name')} *</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
               value={formData.name}
               onChangeText={(text) => setFormData({ ...formData, name: text })}
-              placeholder="Enter full name"
+              placeholder={t('enterFullName')}
               placeholderTextColor={colors.secondary}
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Email *</Text>
+            <Text style={[styles.label, { color: colors.text }]}>ID Card Number *</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-              value={formData.email}
-              onChangeText={(text) => setFormData({ ...formData, email: text })}
-              placeholder="Enter email address"
+              value={formData.idCardNumber}
+              onChangeText={(text) => setFormData({ ...formData, idCardNumber: text })}
+              placeholder="Enter ID card number"
               placeholderTextColor={colors.secondary}
-              keyboardType="email-address"
               autoCapitalize="none"
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>
-              Password {!editingUser && '*'}
-            </Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-              value={formData.password}
-              onChangeText={(text) => setFormData({ ...formData, password: text })}
-              placeholder={editingUser ? "Leave blank to keep current password" : "Enter password"}
-              placeholderTextColor={colors.secondary}
-              secureTextEntry
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Role</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('role')}</Text>
             <View style={styles.roleContainer}>
               <TouchableOpacity
                 style={[
@@ -258,7 +234,7 @@ export const UsersScreen: React.FC = () => {
                 onPress={() => setFormData({ ...formData, role: 'worker' })}
               >
                 <Text style={[styles.roleText, { color: formData.role === 'worker' ? '#ffffff' : colors.text }]}>
-                  Worker
+                  {t('worker')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -269,66 +245,66 @@ export const UsersScreen: React.FC = () => {
                 onPress={() => setFormData({ ...formData, role: 'admin' })}
               >
                 <Text style={[styles.roleText, { color: formData.role === 'admin' ? '#ffffff' : colors.text }]}>
-                  Admin
+                  {t('admin')}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Position</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('position')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
               value={formData.position}
               onChangeText={(text) => setFormData({ ...formData, position: text })}
-              placeholder="Enter job position"
+              placeholder={t('enterJobPosition')}
               placeholderTextColor={colors.secondary}
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Monthly Salary</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('monthlySalary')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
               value={formData.salary}
               onChangeText={(text) => setFormData({ ...formData, salary: text })}
-              placeholder="Enter monthly salary"
+              placeholder={t('enterMonthlySalary')}
               placeholderTextColor={colors.secondary}
               keyboardType="numeric"
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Hourly Rate</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('hourlyRate')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
               value={formData.hourlyRate}
               onChangeText={(text) => setFormData({ ...formData, hourlyRate: text })}
-              placeholder="Enter hourly rate"
+              placeholder={t('enterHourlyRate')}
               placeholderTextColor={colors.secondary}
               keyboardType="numeric"
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Phone</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('phone')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
               value={formData.phone}
               onChangeText={(text) => setFormData({ ...formData, phone: text })}
-              placeholder="Enter phone number"
+              placeholder={t('enterPhoneNumber')}
               placeholderTextColor={colors.secondary}
               keyboardType="phone-pad"
             />
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Address</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('address')}</Text>
             <TextInput
               style={[styles.input, styles.textArea, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
               value={formData.address}
               onChangeText={(text) => setFormData({ ...formData, address: text })}
-              placeholder="Enter address"
+              placeholder={t('enterAddress')}
               placeholderTextColor={colors.secondary}
               multiline
               numberOfLines={3}
@@ -352,7 +328,7 @@ export const UsersScreen: React.FC = () => {
             {user.name}
           </Text>
           <Text style={[styles.userEmail, { color: colors.secondary }]}>
-            {user.email}
+            ID: {user.idCardNumber}
           </Text>
           <Text style={[styles.userRole, { color: colors.primary }]}>
             {user.role === 'admin' ? t('admin') : t('worker')}
@@ -398,10 +374,10 @@ export const UsersScreen: React.FC = () => {
         <View style={styles.accessDenied}>
           <Ionicons name="lock-closed" size={64} color={colors.secondary} />
           <Text style={[styles.accessDeniedText, { color: colors.text }]}>
-            Access Denied
+            {t('accessDenied')}
           </Text>
           <Text style={[styles.accessDeniedSubtext, { color: colors.secondary }]}>
-            Admin privileges required
+            {t('adminPrivilegesRequired')}
           </Text>
         </View>
       </View>

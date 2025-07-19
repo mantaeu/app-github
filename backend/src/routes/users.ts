@@ -54,11 +54,10 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response, next: N
 });
 
 // @route   POST /api/users
-// @desc    Create new user
+// @desc    Create new user with ID card number
 // @access  Private/Admin
 router.post('/', [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
+  body('idCardNumber').trim().isLength({ min: 1 }).withMessage('ID card number is required'),
   body('name').trim().isLength({ min: 2 }),
   body('role').isIn(['admin', 'worker']),
 ], authenticate, authorize('admin'), async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -72,21 +71,20 @@ router.post('/', [
       });
     }
 
-    const { email, password, name, role, phone, address, position, salary, hourlyRate } = req.body;
+    const { idCardNumber, name, role, phone, address, position, salary, hourlyRate } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Check if user already exists with this ID card number
+    const existingUser = await User.findOne({ idCardNumber });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'User already exists with this email',
+        message: 'User already exists with this ID card number',
       });
     }
 
     // Create new user
     const user = new User({
-      email,
-      password,
+      idCardNumber,
       name,
       role,
       phone,
@@ -111,7 +109,7 @@ router.post('/', [
 // @desc    Update user
 // @access  Private
 router.put('/:id', [
-  body('email').optional().isEmail().normalizeEmail(),
+  body('idCardNumber').optional().trim().isLength({ min: 1 }),
   body('name').optional().trim().isLength({ min: 2 }),
   body('role').optional().isIn(['admin', 'worker']),
 ], authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {

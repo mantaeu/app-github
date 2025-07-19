@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Localization from 'expo-localization';
-import { I18n } from 'i18n-js';
-import { LanguageContextType } from '../types';
-import { translations } from '../localization/translations';
+import { translations, TranslationKey, Language } from '../localization/translations';
 
-const i18n = new I18n(translations);
-i18n.enableFallback = true;
-i18n.defaultLocale = 'en';
+interface LanguageContextType {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: TranslationKey, params?: Record<string, string>) => string;
+  isRTL: boolean;
+}
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
@@ -16,45 +16,70 @@ interface LanguageProviderProps {
 }
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
-  const [language, setLanguageState] = useState<'en' | 'fr' | 'ar'>('en');
+  const [language, setLanguageState] = useState<Language>('en');
 
   useEffect(() => {
     loadStoredLanguage();
   }, []);
 
-  useEffect(() => {
-    i18n.locale = language;
-  }, [language]);
-
   const loadStoredLanguage = async () => {
     try {
-      const storedLanguage = await AsyncStorage.getItem('language');
-      if (storedLanguage && ['en', 'fr', 'ar'].includes(storedLanguage)) {
-        setLanguageState(storedLanguage as 'en' | 'fr' | 'ar');
+      const storedLanguage = await AsyncStorage.getItem('app_language');
+      console.log('📱 Loaded stored language:', storedLanguage);
+      
+      if (storedLanguage && (storedLanguage === 'en' || storedLanguage === 'fr' || storedLanguage === 'ar')) {
+        setLanguageState(storedLanguage as Language);
       } else {
-        // Use device locale if available
-        const locale = Localization.locale || Localization.getLocales()?.[0]?.languageCode || 'en';
-        const deviceLocale = locale.split('-')[0];
-        if (['en', 'fr', 'ar'].includes(deviceLocale)) {
-          setLanguageState(deviceLocale as 'en' | 'fr' | 'ar');
-        }
+        // Default to English if no stored language
+        setLanguageState('en');
       }
     } catch (error) {
       console.error('Error loading stored language:', error);
+      setLanguageState('en');
     }
   };
 
-  const setLanguage = async (lang: 'en' | 'fr' | 'ar') => {
+  const setLanguage = async (lang: Language) => {
     try {
+      console.log('🌐 Setting language to:', lang);
       setLanguageState(lang);
-      await AsyncStorage.setItem('language', lang);
+      await AsyncStorage.setItem('app_language', lang);
+      console.log('💾 Language saved to storage:', lang);
     } catch (error) {
       console.error('Error storing language:', error);
     }
   };
 
-  const t = (key: string): string => {
-    return i18n.t(key);
+  const t = (key: TranslationKey, params?: Record<string, string>): string => {
+    try {
+      let translation = translations[language]?.[key];
+      
+      if (!translation) {
+        // Fallback to English if translation not found
+        translation = translations.en[key];
+        if (translation) {
+          console.warn(`Translation missing for key "${key}" in language "${language}", using English fallback`);
+        } else {
+          // Return the key itself if no translation found
+          console.warn(`Translation missing for key "${key}" in all languages`);
+          return key;
+        }
+      }
+      
+      // Replace placeholders with parameters
+      if (params && translation) {
+        let result = translation;
+        Object.keys(params).forEach(param => {
+          result = result.replace(new RegExp(`\\{${param}\\}`, 'g'), params[param]);
+        });
+        return result;
+      }
+      
+      return translation || key;
+    } catch (error) {
+      console.error('Error getting translation for key:', key, error);
+      return key;
+    }
   };
 
   const isRTL = language === 'ar';

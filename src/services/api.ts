@@ -88,14 +88,21 @@ class ApiService {
   }
 
   // Authentication
-  async login(email: string, password: string): Promise<ApiResponse<{ user: User; token: string }>> {
+  async login(idCardNumber: string): Promise<ApiResponse<{ user: User; token: string }>> {
     return this.request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ idCardNumber }),
+    });
+  }
+
+  async adminLogin(email: string, password: string): Promise<ApiResponse<{ user: User; token: string }>> {
+    return this.request('/auth/admin-login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
   }
 
-  async register(userData: Partial<User> & { password: string }): Promise<ApiResponse<User>> {
+  async register(userData: Partial<User>): Promise<ApiResponse<User>> {
     return this.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
@@ -111,7 +118,7 @@ class ApiService {
     return this.request(`/users/${id}`);
   }
 
-  async createUser(userData: Partial<User> & { password: string }): Promise<ApiResponse<User>> {
+  async createUser(userData: Partial<User>): Promise<ApiResponse<User>> {
     return this.request('/users', {
       method: 'POST',
       body: JSON.stringify(userData),

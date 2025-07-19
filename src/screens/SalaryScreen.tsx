@@ -56,7 +56,7 @@ export const SalaryScreen: React.FC = () => {
     } catch (error) {
       console.error('Error loading salary records:', error);
       setSalaryRecords([]); // Set empty array on error
-      Alert.alert(t('error'), 'Failed to load salary records');
+      Alert.alert(t('error'), t('failedToLoadSalaryRecords'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -74,10 +74,10 @@ export const SalaryScreen: React.FC = () => {
     try {
       setExporting(true);
       await apiService.exportAllSalariesPDF();
-      Alert.alert(t('success'), 'Salaries PDF exported successfully!');
+      Alert.alert(t('success'), t('salariesPDFExported'));
     } catch (error) {
       console.error('Error exporting salaries PDF:', error);
-      Alert.alert(t('error'), 'Failed to export salaries PDF');
+      Alert.alert(t('error'), t('failedToExportSalariesPDF'));
     } finally {
       setExporting(false);
     }
@@ -87,10 +87,10 @@ export const SalaryScreen: React.FC = () => {
     try {
       setDownloadingId(record._id);
       await apiService.downloadIndividualSalarySlipPDF(record._id);
-      Alert.alert(t('success'), 'Salary slip PDF downloaded successfully!');
+      Alert.alert(t('success'), t('salarySlipPDFDownloaded'));
     } catch (error) {
       console.error('Error downloading salary slip:', error);
-      Alert.alert(t('error'), 'Failed to download salary slip PDF');
+      Alert.alert(t('error'), t('failedToDownloadSalarySlip'));
     } finally {
       setDownloadingId(null);
     }
@@ -103,14 +103,14 @@ export const SalaryScreen: React.FC = () => {
       const response = await apiService.markSalaryAsPaid(recordId);
 
       if (response.success) {
-        Alert.alert(t('success'), 'Salary marked as paid');
+        Alert.alert(t('success'), t('salaryMarkedAsPaid'));
         loadSalaryRecords();
       } else {
-        Alert.alert(t('error'), response.error || 'Failed to update salary status');
+        Alert.alert(t('error'), response.error || t('failedToUpdateSalaryStatus'));
       }
     } catch (error) {
       console.error('Error marking salary as paid:', error);
-      Alert.alert(t('error'), 'Failed to update salary status');
+      Alert.alert(t('error'), t('failedToUpdateSalaryStatus'));
     }
   };
 
@@ -122,24 +122,24 @@ export const SalaryScreen: React.FC = () => {
     const currentYear = currentDate.getFullYear();
 
     Alert.alert(
-      'Generate Monthly Salaries',
-      `Generate salary records for ${currentMonth} ${currentYear}?`,
+      t('generateMonthlySalaries'),
+      `${t('generateSalaryRecordsFor')} ${currentMonth} ${currentYear}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Generate',
+          text: t('generate'),
           onPress: async () => {
             try {
               const response = await apiService.generateMonthlySalaries(currentMonth, currentYear);
               if (response.success) {
-                Alert.alert(t('success'), 'Monthly salary records generated successfully');
+                Alert.alert(t('success'), t('monthlySalaryRecordsGenerated'));
                 loadSalaryRecords();
               } else {
-                Alert.alert(t('error'), response.error || 'Failed to generate monthly salaries');
+                Alert.alert(t('error'), response.error || t('failedToGenerateMonthlySalaries'));
               }
             } catch (error) {
               console.error('Error generating monthly salaries:', error);
-              Alert.alert(t('error'), 'Failed to generate monthly salaries');
+              Alert.alert(t('error'), t('failedToGenerateMonthlySalaries'));
             }
           },
         },
@@ -152,12 +152,12 @@ export const SalaryScreen: React.FC = () => {
     if (!userId) return;
 
     Alert.alert(
-      'Monthly Checkout',
-      `Checkout salary for ${record.month} ${record.year}?`,
+      t('monthlyCheckout'),
+      `${t('checkoutSalaryFor')} ${record.month} ${record.year}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Checkout',
+          text: t('checkout'),
           onPress: async () => {
             try {
               const response = await apiService.checkoutMonthlySalary(
@@ -168,10 +168,10 @@ export const SalaryScreen: React.FC = () => {
               if (response.success) {
                 Alert.alert(
                   t('success'),
-                  'Monthly checkout completed! Receipt generated.',
+                  t('monthlyCheckoutCompleted'),
                   [
                     {
-                      text: 'View Receipt',
+                      text: t('viewReceipt'),
                       onPress: () => {
                         // Navigate to receipts or show receipt details
                         console.log('Receipt:', response.data?.receipt);
@@ -182,11 +182,11 @@ export const SalaryScreen: React.FC = () => {
                 );
                 loadSalaryRecords();
               } else {
-                Alert.alert(t('error'), response.error || 'Failed to complete monthly checkout');
+                Alert.alert(t('error'), response.error || t('failedToCompleteMonthlycheckout'));
               }
             } catch (error) {
               console.error('Error during monthly checkout:', error);
-              Alert.alert(t('error'), 'Failed to complete monthly checkout');
+              Alert.alert(t('error'), t('failedToCompleteMonthlycheckout'));
             }
           },
         },
@@ -220,7 +220,7 @@ export const SalaryScreen: React.FC = () => {
                   { color: record.isPaid ? colors.success : colors.warning },
                 ]}
               >
-                {record.isPaid ? 'Paid' : 'Pending'}
+                {record.isPaid ? t('paid') : t('pending')}
               </Text>
             </View>
           </View>
@@ -297,7 +297,7 @@ export const SalaryScreen: React.FC = () => {
         <View style={styles.actionButtons}>
           {user?.role === 'admin' && !record.isPaid && (
             <ThemedButton
-              title="Mark as Paid"
+              title={t('markAsPaid')}
               onPress={() => handleMarkAsPaid(record._id)}
               size="small"
               variant="outline"
@@ -307,7 +307,7 @@ export const SalaryScreen: React.FC = () => {
           
           {user?.role === 'worker' && !record.isPaid && (
             <ThemedButton
-              title="Monthly Checkout"
+              title={t('monthlyCheckout')}
               onPress={() => handleMonthlyCheckout(record)}
               size="small"
               style={styles.actionButton}
@@ -317,7 +317,7 @@ export const SalaryScreen: React.FC = () => {
 
         {record.paidAt && (
           <Text style={[styles.paidDate, { color: colors.secondary }]}>
-            Paid on {new Date(record.paidAt).toLocaleDateString()}
+            {t('paidOn')} {new Date(record.paidAt).toLocaleDateString()}
           </Text>
         )}
       </ThemedCard>
@@ -340,7 +340,7 @@ export const SalaryScreen: React.FC = () => {
         {user?.role === 'admin' && (
           <View style={styles.headerButtons}>
             <ThemedButton
-              title="Export PDF"
+              title={t('exportPDF')}
               onPress={handleExportPDF}
               size="small"
               style={styles.exportButton}
@@ -349,7 +349,7 @@ export const SalaryScreen: React.FC = () => {
               disabled={exporting}
             />
             <ThemedButton
-              title="Generate Monthly"
+              title={t('generateMonthly')}
               onPress={handleGenerateMonthly}
               size="small"
               style={styles.generateButton}

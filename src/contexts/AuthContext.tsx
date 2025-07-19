@@ -33,10 +33,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (idCardNumber: string) => {
     try {
       setLoading(true);
-      const response = await apiService.login(email, password);
+      const response = await apiService.login(idCardNumber);
       
       if (response.success && response.data) {
         // The backend returns { success: true, data: { user, token } }
@@ -63,6 +63,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const adminLogin = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      const response = await apiService.adminLogin(email, password);
+      
+      if (response.success && response.data) {
+        // The backend returns { success: true, data: { user, token } }
+        const { user: userData, token: authToken } = response.data;
+        
+        if (userData && authToken) {
+          setUser(userData);
+          setToken(authToken);
+          await AsyncStorage.setItem('authToken', authToken);
+          await AsyncStorage.setItem('user', JSON.stringify(userData));
+          apiService.setAuthToken(authToken);
+        } else {
+          throw new Error('Invalid response structure: missing user or token');
+        }
+      } else {
+        const errorMessage = response.error || 'Admin login failed';
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      console.error('Admin login error:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       setUser(null);
@@ -81,6 +111,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     token,
     login,
+    adminLogin,
     logout,
     loading,
   };

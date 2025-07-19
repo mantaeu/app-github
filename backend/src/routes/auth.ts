@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { body, validationResult } from 'express-validator';
 import { User } from '../models/User';
 import { Admin } from '../models/Admin';
@@ -20,11 +21,83 @@ const generateToken = (userId: string): string => {
 };
 
 // @route   POST /api/auth/login
-// @desc    Login user
+// @desc    Login user with ID card number
 // @access  Public
 router.post('/login', [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
+  body('idCardNumber').trim().isLength({ min: 1 }).withMessage('ID card number is required'),
+], async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation errors',
+        errors: errors.array(),
+      });
+    }
+
+    const { idCardNumber } = req.body;
+
+    // Try to find user in users collection by ID card number
+    let user = await User.findOne({ idCardNumber, isActive: true });
+    let isAdmin = false;
+    
+    if (!user) {
+      // If not found, try admins collection (admins still use email/password)
+      user = await Admin.findOne({ email: idCardNumber, isActive: true });
+      isAdmin = !!user;
+      
+      // For admin login, we still need to check password if provided
+      if (user && req.body.password) {
+        const isPasswordValid = await user.comparePassword(req.body.password);
+        if (!isPasswordValid) {
+          return res.status(401).json({
+            success: false,
+            message: 'Invalid credentials',
+          });
+        }
+      }
+    }
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid ID card number',
+      });
+    }
+
+    // For regular users, ID card number is both username and password
+    if (!isAdmin) {
+      const isIdCardValid = await user.compareIdCard(idCardNumber);
+      if (!isIdCardValid) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid ID card number',
+        });
+      }
+    }
+
+    // Generate token
+    const token = generateToken(user._id.toString());
+
+    res.json({
+      success: true,
+      data: {
+        user: { ...user.toObject(), role: isAdmin ? 'admin' : user.role || 'worker' },
+        token,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @route   POST /api/auth/admin-login
+// @desc    Login admin with email and password
+// @access  Public
+router.post('/admin-login', [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('password').isLength({ min: 1 }).withMessage('Password is required'),
 ], async (req: Request, res: Response, next: NextFunction) => {
   try {
     const errors = validationResult(req);
@@ -38,15 +111,9 @@ router.post('/login', [
 
     const { email, password } = req.body;
 
-    // Try to find user in users collection
-    let user = await User.findOne({ email, isActive: true });
-    let isAdmin = false;
-    if (!user) {
-      // If not found, try admins collection
-      user = await Admin.findOne({ email, isActive: true });
-      isAdmin = !!user;
-    }
-    if (!user) {
+    // Find admin by email
+    const admin = await Admin.findOne({ email, isActive: true });
+    if (!admin) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials',
@@ -54,7 +121,7 @@ router.post('/login', [
     }
 
     // Check password
-    const isPasswordValid = await user.comparePassword(password);
+    const isPasswordValid = await admin.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -63,12 +130,12 @@ router.post('/login', [
     }
 
     // Generate token
-    const token = generateToken(user._id.toString());
+    const token = generateToken(admin._id.toString());
 
     res.json({
       success: true,
       data: {
-        user: { ...user.toObject(), role: isAdmin ? 'admin' : user.role || 'worker' },
+        user: { ...admin.toObject(), role: 'admin' },
         token,
       },
     });

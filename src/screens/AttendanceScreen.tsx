@@ -58,7 +58,7 @@ export const AttendanceScreen: React.FC = () => {
     } catch (error) {
       console.error('Error loading attendance:', error);
       setAttendance([]);
-      Alert.alert(t('error'), 'Failed to load attendance records');
+      Alert.alert(t('error'), t('noAttendanceRecords'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -123,19 +123,19 @@ export const AttendanceScreen: React.FC = () => {
       console.log('🔍 Check-in response:', response);
 
       if (response.success) {
-        Alert.alert(t('success'), `${userName} checked in successfully`);
+        Alert.alert(t('success'), t('checkedInSuccessfully', { name: userName }));
         await loadAttendance(); // Reload attendance data
       } else {
         console.error('Check-in failed:', response.error);
         if (response.error?.includes('already recorded')) {
-          Alert.alert(t('error'), `${userName} has already checked in today`);
+          Alert.alert(t('error'), t('alreadyCheckedInToday', { name: userName }));
         } else {
-          Alert.alert(t('error'), response.error || 'Failed to check in');
+          Alert.alert(t('error'), response.error || t('failedToCheckIn'));
         }
       }
     } catch (error) {
       console.error('Error checking in:', error);
-      Alert.alert(t('error'), 'Failed to check in. Please try again.');
+      Alert.alert(t('error'), t('failedToCheckIn'));
     }
   };
 
@@ -154,14 +154,14 @@ export const AttendanceScreen: React.FC = () => {
       console.log('🔍 Check-out response:', response);
 
       if (response.success) {
-        Alert.alert(t('success'), `${userName || 'User'} checked out successfully`);
+        Alert.alert(t('success'), t('checkedOutSuccessfully', { name: userName || t('user') }));
         await loadAttendance(); // Reload attendance data
       } else {
-        Alert.alert(t('error'), response.error || 'Failed to check out');
+        Alert.alert(t('error'), response.error || t('failedToCheckOut'));
       }
     } catch (error) {
       console.error('Error checking out:', error);
-      Alert.alert(t('error'), 'Failed to check out. Please try again.');
+      Alert.alert(t('error'), t('failedToCheckOut'));
     }
   };
 
@@ -169,25 +169,25 @@ export const AttendanceScreen: React.FC = () => {
     if (user?.role !== 'admin') return;
 
     Alert.alert(
-      'Mark Absent Workers',
-      'This will mark all workers who haven\'t checked in today as absent. Continue?',
+      t('markAbsentWorkers'),
+      t('markAbsentWorkersConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Mark Absent',
+          text: t('markAbsent'),
           style: 'destructive',
           onPress: async () => {
             try {
               const response = await apiService.markAbsentWorkers();
               if (response.success) {
-                Alert.alert(t('success'), 'Absent workers marked successfully');
+                Alert.alert(t('success'), t('absentWorkersMarked'));
                 await loadAttendance();
               } else {
-                Alert.alert(t('error'), response.error || 'Failed to mark absent workers');
+                Alert.alert(t('error'), response.error || t('failedToMarkAbsentWorkers'));
               }
             } catch (error) {
               console.error('Error marking absent workers:', error);
-              Alert.alert(t('error'), 'Failed to mark absent workers');
+              Alert.alert(t('error'), t('failedToMarkAbsentWorkers'));
             }
           },
         },
@@ -199,18 +199,18 @@ export const AttendanceScreen: React.FC = () => {
     if (user?.role !== 'admin') return;
 
     const statusOptions = [
-      { label: 'Present', value: 'present' },
-      { label: 'Absent', value: 'absent' },
-      { label: 'Late', value: 'late' },
+      { label: t('present'), value: 'present' },
+      { label: t('absent'), value: 'absent' },
+      { label: t('late'), value: 'late' },
     ];
 
     const availableOptions = statusOptions.filter(option => option.value !== currentStatus);
 
     Alert.alert(
-      'Change Attendance Status',
-      `Change ${userName}'s status from ${currentStatus} to:`,
+      t('changeAttendanceStatus'),
+      t('changeStatusFrom', { name: userName, currentStatus }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         ...availableOptions.map(option => ({
           text: option.label,
           onPress: () => updateAttendanceStatus(userId, userName, option.value, attendanceId),
@@ -241,10 +241,10 @@ export const AttendanceScreen: React.FC = () => {
         const response = await apiService.updateAttendance(attendanceId, updateData);
         
         if (response.success) {
-          Alert.alert(t('success'), `${userName}'s status changed to ${newStatus}`);
+          Alert.alert(t('success'), t('statusChangedTo', { name: userName, newStatus }));
           await loadAttendance();
         } else {
-          Alert.alert(t('error'), response.error || 'Failed to update attendance status');
+          Alert.alert(t('error'), response.error || t('failedToUpdateAttendanceStatus'));
         }
       } else {
         // Create new attendance record
@@ -265,15 +265,15 @@ export const AttendanceScreen: React.FC = () => {
         const response = await apiService.createAttendance(attendanceData);
         
         if (response.success) {
-          Alert.alert(t('success'), `${userName} marked as ${newStatus}`);
+          Alert.alert(t('success'), t('markedAs', { name: userName, status: newStatus }));
           await loadAttendance();
         } else {
-          Alert.alert(t('error'), response.error || 'Failed to create attendance record');
+          Alert.alert(t('error'), response.error || t('failedToCreateAttendanceRecord'));
         }
       }
     } catch (error) {
       console.error('Error updating attendance status:', error);
-      Alert.alert(t('error'), 'Failed to update attendance status');
+      Alert.alert(t('error'), t('failedToUpdateAttendanceStatus'));
     }
   };
 
@@ -281,25 +281,25 @@ export const AttendanceScreen: React.FC = () => {
     if (user?.role !== 'admin') return;
 
     Alert.alert(
-      'Delete Attendance Record',
-      `Are you sure you want to delete ${userName}'s attendance record for today?`,
+      t('deleteAttendanceRecord'),
+      t('deleteAttendanceConfirm', { name: userName }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               const response = await apiService.deleteAttendance(attendanceId);
               if (response.success) {
-                Alert.alert(t('success'), 'Attendance record deleted successfully');
+                Alert.alert(t('success'), t('attendanceRecordDeleted'));
                 await loadAttendance();
               } else {
-                Alert.alert(t('error'), response.error || 'Failed to delete attendance record');
+                Alert.alert(t('error'), response.error || t('failedToDeleteAttendanceRecord'));
               }
             } catch (error) {
               console.error('Error deleting attendance:', error);
-              Alert.alert(t('error'), 'Failed to delete attendance record');
+              Alert.alert(t('error'), t('failedToDeleteAttendanceRecord'));
             }
           },
         },
@@ -404,7 +404,7 @@ export const AttendanceScreen: React.FC = () => {
           <View style={styles.todayStatusHeader}>
             <Ionicons name="today" size={24} color={colors.primary} />
             <Text style={[styles.todayStatusTitle, { color: colors.text }]}>
-              Today's Status
+              {t('todayStatus')}
             </Text>
           </View>
           
@@ -417,25 +417,25 @@ export const AttendanceScreen: React.FC = () => {
                   color={getStatusColor(todayAttendance.status)}
                 />
                 <Text style={[styles.statusText, { color: getStatusColor(todayAttendance.status) }]}>
-                  {todayAttendance.status.charAt(0).toUpperCase() + todayAttendance.status.slice(1)}
+                  {t(todayAttendance.status as any)}
                 </Text>
               </View>
               
               {todayAttendance.checkIn && (
                 <Text style={[styles.timeText, { color: colors.text }]}>
-                  Checked in: {formatTime(todayAttendance.checkIn)}
+                  {t('checkedIn')}: {formatTime(todayAttendance.checkIn)}
                 </Text>
               )}
               
               {todayAttendance.checkOut && (
                 <Text style={[styles.timeText, { color: colors.text }]}>
-                  Checked out: {formatTime(todayAttendance.checkOut)}
+                  {t('checkedOut')}: {formatTime(todayAttendance.checkOut)}
                 </Text>
               )}
               
               {!todayAttendance.checkOut && todayAttendance.checkIn && (
                 <Text style={[styles.activeText, { color: colors.warning }]}>
-                  Currently checked in
+                  {t('currentlyCheckedIn')}
                 </Text>
               )}
             </View>
@@ -443,14 +443,14 @@ export const AttendanceScreen: React.FC = () => {
             <View style={styles.statusContainer}>
               <Ionicons name="time" size={20} color={colors.secondary} />
               <Text style={[styles.statusText, { color: colors.secondary }]}>
-                Not checked in today
+                {t('notCheckedInToday')}
               </Text>
             </View>
           )}
         </ThemedCard>
 
         {/* Recent Attendance History */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent History</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('recentHistory')}</Text>
         
         <ScrollView
           style={styles.scrollView}
@@ -468,7 +468,7 @@ export const AttendanceScreen: React.FC = () => {
             <View style={styles.emptyContainer}>
               <Ionicons name="calendar" size={64} color={colors.secondary} />
               <Text style={[styles.emptyText, { color: colors.text }]}>
-                No attendance records
+                {t('noAttendanceRecords')}
               </Text>
             </View>
           ) : (
@@ -503,7 +503,7 @@ export const AttendanceScreen: React.FC = () => {
                 {userItem.name}
               </Text>
               <Text style={[styles.userPosition, { color: colors.secondary }]}>
-                {userItem.position || 'Worker'}
+                {userItem.position || t('worker')}
               </Text>
             </View>
             
@@ -525,25 +525,25 @@ export const AttendanceScreen: React.FC = () => {
                       color={getStatusColor(todayAttendance.status)}
                     />
                     <Text style={[styles.statusText, { color: getStatusColor(todayAttendance.status) }]}>
-                      {todayAttendance.status}
+                      {t(todayAttendance.status as any)}
                     </Text>
                     <Ionicons name="chevron-down" size={12} color={colors.secondary} style={{ marginLeft: 4 }} />
                   </TouchableOpacity>
                   
                   {todayAttendance.checkIn && (
                     <Text style={[styles.timeText, { color: colors.secondary }]}>
-                      In: {formatTime(todayAttendance.checkIn)}
+                      {t('in')}: {formatTime(todayAttendance.checkIn)}
                     </Text>
                   )}
                   
                   <View style={styles.actionButtonsRow}>
                     {todayAttendance.checkOut ? (
                       <Text style={[styles.timeText, { color: colors.secondary }]}>
-                        Out: {formatTime(todayAttendance.checkOut)}
+                        {t('out')}: {formatTime(todayAttendance.checkOut)}
                       </Text>
                     ) : todayAttendance.checkIn ? (
                       <ThemedButton
-                        title="Check Out"
+                        title={t('checkOut')}
                         onPress={() => handleCheckOut(todayAttendance._id, userItem.name)}
                         size="small"
                         variant="outline"
@@ -562,13 +562,13 @@ export const AttendanceScreen: React.FC = () => {
               ) : (
                 <View style={styles.noAttendanceActions}>
                   <ThemedButton
-                    title="Check In"
+                    title={t('checkIn')}
                     onPress={() => handleCheckIn(userItem._id, userItem.name)}
                     size="small"
                     style={styles.actionButton}
                   />
                   <ThemedButton
-                    title="Mark Absent"
+                    title={t('markAbsent')}
                     onPress={() => updateAttendanceStatus(userItem._id, userItem.name, 'absent')}
                     size="small"
                     variant="outline"
@@ -586,10 +586,10 @@ export const AttendanceScreen: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-            {t('attendance')} Management
+            {t('attendanceManagement')}
           </Text>
           <ThemedButton
-            title="Mark Absent"
+            title={t('markAbsent')}
             onPress={handleMarkAbsentWorkers}
             size="small"
             variant="outline"
@@ -597,7 +597,7 @@ export const AttendanceScreen: React.FC = () => {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Attendance</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('todayAttendance')}</Text>
 
         <ScrollView
           style={styles.scrollView}
@@ -615,10 +615,10 @@ export const AttendanceScreen: React.FC = () => {
             <View style={styles.emptyContainer}>
               <Ionicons name="people" size={64} color={colors.secondary} />
               <Text style={[styles.emptyText, { color: colors.text }]}>
-                No workers found
+                {t('noWorkersFound')}
               </Text>
               <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
-                Add some workers to manage their attendance
+                {t('addWorkersToManageAttendance')}
               </Text>
             </View>
           ) : (
@@ -645,7 +645,7 @@ export const AttendanceScreen: React.FC = () => {
               color={getStatusColor(record.status)}
             />
             <Text style={[styles.status, { color: getStatusColor(record.status) }]}>
-              {record.status}
+              {t(record.status as any)}
             </Text>
           </View>
         </View>
@@ -655,7 +655,7 @@ export const AttendanceScreen: React.FC = () => {
         {record.checkIn && (
           <View style={styles.timeItem}>
             <Text style={[styles.timeLabel, { color: colors.secondary }]}>
-              Check In
+              {t('checkIn')}
             </Text>
             <Text style={[styles.timeValue, { color: colors.text }]}>
               {formatTime(record.checkIn)}
@@ -666,7 +666,7 @@ export const AttendanceScreen: React.FC = () => {
         {record.checkOut && (
           <View style={styles.timeItem}>
             <Text style={[styles.timeLabel, { color: colors.secondary }]}>
-              Check Out
+              {t('checkOut')}
             </Text>
             <Text style={[styles.timeValue, { color: colors.text }]}>
               {formatTime(record.checkOut)}
@@ -678,7 +678,7 @@ export const AttendanceScreen: React.FC = () => {
       {record.hoursWorked > 0 && (
         <View style={styles.hoursSection}>
           <Text style={[styles.hoursLabel, { color: colors.secondary }]}>
-            Hours Worked: 
+            {t('hoursWorked')}: 
           </Text>
           <Text style={[styles.hoursValue, { color: colors.text }]}>
             {record.hoursWorked.toFixed(1)}h
@@ -687,7 +687,7 @@ export const AttendanceScreen: React.FC = () => {
           {record.overtime > 0 && (
             <>
               <Text style={[styles.hoursLabel, { color: colors.secondary }]}>
-                {' • Overtime: '}
+                {' • '}{t('overtime')}: 
               </Text>
               <Text style={[styles.overtimeValue, { color: colors.warning }]}>
                 {record.overtime.toFixed(1)}h

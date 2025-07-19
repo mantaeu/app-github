@@ -2,8 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
-  email: string;
-  password: string;
+  idCardNumber: string;
   name: string;
   role: 'admin' | 'worker';
   phone?: string;
@@ -14,21 +13,15 @@ export interface IUser extends Document {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-  comparePassword(candidatePassword: string): Promise<boolean>;
+  compareIdCard(candidateIdCard: string): Promise<boolean>;
 }
 
 const userSchema = new Schema<IUser>({
-  email: {
+  idCardNumber: {
     type: String,
     required: true,
     unique: true,
-    lowercase: true,
     trim: true,
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6,
   },
   name: {
     type: String,
@@ -68,28 +61,14 @@ const userSchema = new Schema<IUser>({
   timestamps: true,
 });
 
-// Hash password before saving
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error as Error);
-  }
-});
-
-// Compare password method
-userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
-  return bcrypt.compare(candidatePassword, this.password);
+// Compare ID card method (simple string comparison since ID card is the password)
+userSchema.methods.compareIdCard = async function (candidateIdCard: string): Promise<boolean> {
+  return this.idCardNumber === candidateIdCard;
 };
 
-// Remove password from JSON output
+// JSON output (no sensitive data to remove since ID card is used for login)
 userSchema.methods.toJSON = function () {
   const userObject = this.toObject();
-  delete userObject.password;
   return userObject;
 };
 

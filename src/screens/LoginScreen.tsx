@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   Image,
+  TouchableOpacity,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -26,27 +27,50 @@ type RootStackParamList = {
 };
 
 export const LoginScreen: React.FC = () => {
+  const [loginType, setLoginType] = useState<'user' | 'admin'>('user');
+  const [idCardNumber, setIdCardNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { login, adminLogin } = useAuth();
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert(t('error'), 'Please fill in all fields');
+  const handleUserLogin = async () => {
+    if (!idCardNumber) {
+      Alert.alert(t('error'), 'Please enter your ID card number');
       return;
     }
 
     try {
       setLoading(true);
-      await login(email, password);
-      // No navigation here! AppNavigator will show Main/TabNavigator automatically
+      console.log('🔐 Attempting user login with ID card...');
+      await login(idCardNumber);
+      console.log('✅ User login successful');
     } catch (error) {
-      Alert.alert(t('error'), t('loginError'));
+      console.log('❌ User login failed:', error);
+      Alert.alert(t('error'), 'Invalid ID card number');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminLogin = async () => {
+    if (!email || !password) {
+      Alert.alert(t('error'), 'Please enter both email and password');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('🔐 Attempting admin login...');
+      await adminLogin(email, password);
+      console.log('✅ Admin login successful');
+    } catch (error) {
+      console.log('❌ Admin login failed:', error);
+      Alert.alert(t('error'), 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -73,30 +97,91 @@ export const LoginScreen: React.FC = () => {
             {t('login')}
           </Text>
 
-          <ThemedTextInput
-            label={t('email')}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder={t('email')}
-          />
+          {/* Login Type Selector */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                loginType === 'user' && { backgroundColor: colors.primary },
+                { borderColor: colors.primary }
+              ]}
+              onPress={() => setLoginType('user')}
+            >
+              <Text style={[
+                styles.tabText,
+                { color: loginType === 'user' ? '#fff' : colors.primary }
+              ]}>
+                Employee
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                loginType === 'admin' && { backgroundColor: colors.primary },
+                { borderColor: colors.primary }
+              ]}
+              onPress={() => setLoginType('admin')}
+            >
+              <Text style={[
+                styles.tabText,
+                { color: loginType === 'admin' ? '#fff' : colors.primary }
+              ]}>
+                Admin
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-          <ThemedTextInput
-            label={t('password')}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder={t('password')}
-          />
+          {loginType === 'user' ? (
+            // User Login Form
+            <View style={styles.formContainer}>
+              <ThemedTextInput
+                label="ID Card Number"
+                value={idCardNumber}
+                onChangeText={setIdCardNumber}
+                keyboardType="default"
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="Enter your ID card number"
+              />
 
-          <ThemedButton
-            title={t('login')}
-            onPress={handleLogin}
-            loading={loading}
-            style={styles.loginButton}
-          />
+              <ThemedButton
+                title="Login"
+                onPress={handleUserLogin}
+                loading={loading}
+                style={styles.loginButton}
+              />
+            </View>
+          ) : (
+            // Admin Login Form
+            <View style={styles.formContainer}>
+              <ThemedTextInput
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="Enter your email"
+              />
+
+              <ThemedTextInput
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="Enter your password"
+              />
+
+              <ThemedButton
+                title="Login as Admin"
+                onPress={handleAdminLogin}
+                loading={loading}
+                style={styles.loginButton}
+              />
+            </View>
+          )}
         </ThemedCard>
 
         <Text style={[styles.footer, { color: colors.secondary }]}>
@@ -148,6 +233,26 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 24,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  formContainer: {
+    gap: 16,
   },
   loginButton: {
     marginTop: 8,

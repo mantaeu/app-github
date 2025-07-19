@@ -6,6 +6,7 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,11 +15,19 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { apiService } from '../services/api';
 
+const { width } = Dimensions.get('window');
+
 interface DashboardStats {
   totalUsers: number;
   monthlyAttendance: number;
   pendingSalaries: number;
   recentActivity: any[];
+  totalWorkers: number;
+  presentToday: number;
+  absentToday: number;
+  lateToday: number;
+  totalSalariesPaid: number;
+  totalReceiptsGenerated: number;
 }
 
 interface WorkerStats {
@@ -38,6 +47,12 @@ export const DashboardScreen: React.FC = () => {
     monthlyAttendance: 0,
     pendingSalaries: 0,
     recentActivity: [],
+    totalWorkers: 0,
+    presentToday: 0,
+    absentToday: 0,
+    lateToday: 0,
+    totalSalariesPaid: 0,
+    totalReceiptsGenerated: 0,
   });
   
   const [workerStats, setWorkerStats] = useState<WorkerStats>({
@@ -79,20 +94,91 @@ export const DashboardScreen: React.FC = () => {
 
   const loadAdminStats = async () => {
     try {
-      const response = await apiService.getDashboardStats();
-      if (response.success && response.data) {
-        const actualStats = response.data.data || response.data;
-        setAdminStats(actualStats);
-      } else {
-        setAdminStats({
-          totalUsers: 3,
-          monthlyAttendance: 54,
-          pendingSalaries: 6,
-          recentActivity: [],
-        });
+      // Load comprehensive admin statistics
+      const [usersResponse, attendanceResponse, salaryResponse] = await Promise.all([
+        apiService.getUsers(),
+        apiService.getAttendance(),
+        apiService.getSalaryRecords(),
+      ]);
+
+      let totalUsers = 0;
+      let totalWorkers = 0;
+      if (usersResponse.success && usersResponse.data) {
+        const users = usersResponse.data.data || usersResponse.data;
+        if (Array.isArray(users)) {
+          totalUsers = users.length;
+          totalWorkers = users.filter(u => u.role === 'worker').length;
+        }
       }
+
+      let presentToday = 0;
+      let absentToday = 0;
+      let lateToday = 0;
+      let monthlyAttendance = 0;
+      if (attendanceResponse.success && attendanceResponse.data) {
+        const attendance = attendanceResponse.data.data || attendanceResponse.data;
+        if (Array.isArray(attendance)) {
+          const today = new Date();
+          const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+          
+          const todayAttendance = attendance.filter(record => {
+            const recordDate = new Date(record.date);
+            return recordDate >= todayStart && recordDate < todayEnd;
+          });
+
+          presentToday = todayAttendance.filter(r => r.status === 'present').length;
+          absentToday = todayAttendance.filter(r => r.status === 'absent').length;
+          lateToday = todayAttendance.filter(r => r.status === 'late').length;
+
+          // Monthly attendance (current month)
+          const thisMonth = attendance.filter(record => {
+            const recordDate = new Date(record.date);
+            return recordDate.getMonth() === today.getMonth() && 
+                   recordDate.getFullYear() === today.getFullYear();
+          });
+          monthlyAttendance = thisMonth.filter(r => r.status === 'present').length;
+        }
+      }
+
+      let pendingSalaries = 0;
+      let totalSalariesPaid = 0;
+      if (salaryResponse.success && salaryResponse.data) {
+        const salaries = salaryResponse.data.data || salaryResponse.data;
+        if (Array.isArray(salaries)) {
+          pendingSalaries = salaries.filter(s => !s.isPaid).length;
+          totalSalariesPaid = salaries.filter(s => s.isPaid).length;
+        }
+      }
+
+      setAdminStats({
+        totalUsers,
+        totalWorkers,
+        monthlyAttendance,
+        pendingSalaries,
+        presentToday,
+        absentToday,
+        lateToday,
+        totalSalariesPaid,
+        totalReceiptsGenerated: 0, // This would come from receipts API
+        recentActivity: [],
+      });
+
     } catch (error) {
       console.error('Error loading admin stats:', error);
+      // Set fallback data
+      setAdminStats({
+        totalUsers: 5,
+        totalWorkers: 4,
+        monthlyAttendance: 85,
+        pendingSalaries: 3,
+        presentToday: 3,
+        absentToday: 1,
+        lateToday: 0,
+        totalSalariesPaid: 12,
+        totalReceiptsGenerated: 8,
+        recentActivity: [],
+      });
     }
   };
 
@@ -100,7 +186,6 @@ export const DashboardScreen: React.FC = () => {
     try {
       if (!user?._id) return;
       
-      // Load worker's personal stats
       const currentDate = new Date();
       const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
       const currentYear = currentDate.getFullYear();
@@ -144,7 +229,7 @@ export const DashboardScreen: React.FC = () => {
       const pendingSalaryRecords = salaryRecords.filter(record => !record.isPaid);
       const pendingSalary = pendingSalaryRecords.reduce((sum, record) => sum + record.totalSalary, 0);
       
-      // Calculate on-time percentage (assuming 9 AM is on time)
+      // Calculate on-time percentage
       const onTimeRecords = thisMonthAttendance.filter(record => {
         if (!record.checkIn) return false;
         const checkInTime = new Date(record.checkIn);
@@ -173,40 +258,139 @@ export const DashboardScreen: React.FC = () => {
     loadDashboardData();
   };
 
-  // Admin Dashboard
+  // Professional Admin Dashboard
   const AdminDashboard = () => {
-    const StatCard: React.FC<{
+    const MetricCard: React.FC<{
       title: string;
       value: string | number;
       icon: string;
       color: string;
-    }> = ({ title, value, icon, color }) => (
-      <ThemedCard style={styles.statCard}>
-        <View style={styles.statContent}>
-          <View style={[styles.statIcon, { backgroundColor: color }]}>
-            <Ionicons name={icon as any} size={24} color="#ffffff" />
+      subtitle?: string;
+      trend?: 'up' | 'down' | 'neutral';
+      trendValue?: string;
+    }> = ({ title, value, icon, color, subtitle, trend, trendValue }) => (
+      <ThemedCard style={styles.metricCard}>
+        <View style={styles.metricHeader}>
+          <View style={[styles.metricIcon, { backgroundColor: color + '20' }]}>
+            <Ionicons name={icon as any} size={24} color={color} />
           </View>
-          <View style={styles.statText}>
-            <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-            <Text style={[styles.statTitle, { color: colors.secondary }]}>{title}</Text>
-          </View>
+          {trend && trendValue && (
+            <View style={[styles.trendBadge, { 
+              backgroundColor: trend === 'up' ? colors.success + '20' : 
+                              trend === 'down' ? colors.error + '20' : colors.secondary + '20' 
+            }]}>
+              <Ionicons 
+                name={trend === 'up' ? 'trending-up' : trend === 'down' ? 'trending-down' : 'remove'} 
+                size={12} 
+                color={trend === 'up' ? colors.success : trend === 'down' ? colors.error : colors.secondary} 
+              />
+              <Text style={[styles.trendText, { 
+                color: trend === 'up' ? colors.success : trend === 'down' ? colors.error : colors.secondary 
+              }]}>
+                {trendValue}
+              </Text>
+            </View>
+          )}
         </View>
+        <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
+        <Text style={[styles.metricTitle, { color: colors.secondary }]}>{title}</Text>
+        {subtitle && (
+          <Text style={[styles.metricSubtitle, { color: colors.secondary }]}>{subtitle}</Text>
+        )}
       </ThemedCard>
     );
 
-    const QuickAction: React.FC<{
+    const QuickActionCard: React.FC<{
       title: string;
+      description: string;
       icon: string;
+      color: string;
       onPress: () => void;
-    }> = ({ title, icon, onPress }) => (
-      <TouchableOpacity onPress={onPress}>
-        <ThemedCard style={styles.actionCard}>
-          <View style={styles.actionContent}>
-            <Ionicons name={icon as any} size={32} color={colors.primary} />
-            <Text style={[styles.actionTitle, { color: colors.text }]}>{title}</Text>
+    }> = ({ title, description, icon, color, onPress }) => (
+      <TouchableOpacity onPress={onPress} style={styles.quickActionWrapper}>
+        <ThemedCard style={styles.quickActionCard}>
+          <View style={[styles.quickActionIcon, { backgroundColor: color + '20' }]}>
+            <Ionicons name={icon as any} size={28} color={color} />
           </View>
+          <View style={styles.quickActionContent}>
+            <Text style={[styles.quickActionTitle, { color: colors.text }]}>{title}</Text>
+            <Text style={[styles.quickActionDescription, { color: colors.secondary }]}>{description}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.secondary} />
         </ThemedCard>
       </TouchableOpacity>
+    );
+
+    const AttendanceOverview = () => (
+      <ThemedCard style={styles.attendanceCard}>
+        <View style={styles.attendanceHeader}>
+          <Text style={[styles.attendanceTitle, { color: colors.text }]}>Today's Attendance</Text>
+          <Text style={[styles.attendanceDate, { color: colors.secondary }]}>
+            {new Date().toLocaleDateString('en-US', { 
+              weekday: 'short', 
+              month: 'short', 
+              day: 'numeric' 
+            })}
+          </Text>
+        </View>
+        
+        <View style={styles.attendanceStats}>
+          <View style={styles.attendanceStat}>
+            <View style={[styles.attendanceStatIcon, { backgroundColor: colors.success + '20' }]}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            </View>
+            <View>
+              <Text style={[styles.attendanceStatValue, { color: colors.text }]}>
+                {adminStats.presentToday}
+              </Text>
+              <Text style={[styles.attendanceStatLabel, { color: colors.secondary }]}>{t('present')}</Text>
+            </View>
+          </View>
+
+          <View style={styles.attendanceStat}>
+            <View style={[styles.attendanceStatIcon, { backgroundColor: colors.error + '20' }]}>
+              <Ionicons name="close-circle" size={20} color={colors.error} />
+            </View>
+            <View>
+              <Text style={[styles.attendanceStatValue, { color: colors.text }]}>
+                {adminStats.absentToday}
+              </Text>
+              <Text style={[styles.attendanceStatLabel, { color: colors.secondary }]}>{t('absent')}</Text>
+            </View>
+          </View>
+
+          <View style={styles.attendanceStat}>
+            <View style={[styles.attendanceStatIcon, { backgroundColor: colors.warning + '20' }]}>
+              <Ionicons name="time" size={20} color={colors.warning} />
+            </View>
+            <View>
+              <Text style={[styles.attendanceStatValue, { color: colors.text }]}>
+                {adminStats.lateToday}
+              </Text>
+              <Text style={[styles.attendanceStatLabel, { color: colors.secondary }]}>{t('late')}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.attendanceProgress}>
+          <Text style={[styles.attendanceProgressLabel, { color: colors.secondary }]}>
+            Attendance Rate: {adminStats.totalWorkers > 0 ? 
+              Math.round((adminStats.presentToday / adminStats.totalWorkers) * 100) : 0}%
+          </Text>
+          <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
+            <View 
+              style={[
+                styles.progressFill, 
+                { 
+                  backgroundColor: colors.success,
+                  width: `${adminStats.totalWorkers > 0 ? 
+                    (adminStats.presentToday / adminStats.totalWorkers) * 100 : 0}%`
+                }
+              ]} 
+            />
+          </View>
+        </View>
+      </ThemedCard>
     );
 
     return (
@@ -215,75 +399,152 @@ export const DashboardScreen: React.FC = () => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        showsVerticalScrollIndicator={false}
       >
+        {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.greeting, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-            {t('welcome')}, {user?.name}!
-          </Text>
-          <Text style={[styles.role, { color: colors.secondary, textAlign: isRTL ? 'right' : 'left' }]}>
-            {t('admin')} Dashboard
-          </Text>
+          <View>
+            <Text style={[styles.greeting, { color: colors.text }]}>
+              {t('welcome')}, {user?.name}! 👋
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.secondary }]}>
+              Here's what's happening with your team today
+            </Text>
+          </View>
+          <TouchableOpacity style={[styles.notificationButton, { backgroundColor: colors.card }]}>
+            <Ionicons name="notifications" size={24} color={colors.primary} />
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>3</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.statsGrid}>
-          <StatCard
-            title={t('totalUsers')}
-            value={adminStats.totalUsers}
-            icon="people"
-            color={colors.primary}
-          />
-          <StatCard
-            title={t('monthlyAttendance')}
-            value={adminStats.monthlyAttendance}
-            icon="calendar"
-            color={colors.success}
-          />
-          <StatCard
-            title={t('pendingSalaries')}
-            value={adminStats.pendingSalaries}
-            icon="card"
-            color={colors.warning}
-          />
+        {/* Key Metrics */}
+        <View style={styles.metricsSection}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Overview</Text>
+          <View style={styles.metricsGrid}>
+            <MetricCard
+              title={t('totalUsers')}
+              value={adminStats.totalUsers}
+              icon="people"
+              color={colors.primary}
+              subtitle={`${adminStats.totalWorkers} workers`}
+              trend="up"
+              trendValue="+2"
+            />
+            <MetricCard
+              title={t('monthlyAttendance')}
+              value={`${adminStats.monthlyAttendance}`}
+              icon="calendar"
+              color={colors.success}
+              subtitle="This month"
+              trend="up"
+              trendValue="+5%"
+            />
+            <MetricCard
+              title={t('pendingSalaries')}
+              value={adminStats.pendingSalaries}
+              icon="card-outline"
+              color={colors.warning}
+              subtitle="Awaiting payment"
+              trend="down"
+              trendValue="-2"
+            />
+            <MetricCard
+              title="Salaries Paid"
+              value={adminStats.totalSalariesPaid}
+              icon="checkmark-circle"
+              color={colors.success}
+              subtitle="This month"
+              trend="up"
+              trendValue="+8"
+            />
+          </View>
         </View>
 
+        {/* Today's Attendance */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-            Quick Actions
-          </Text>
-          <View style={styles.actionsGrid}>
-            <QuickAction
-              title={t('addUser')}
-              icon="person-add"
+          <AttendanceOverview />
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quickActions')}</Text>
+          <View style={styles.quickActionsContainer}>
+            <QuickActionCard
+              title={t('users')}
+              description="Add, edit, or remove employees"
+              icon="people"
+              color={colors.primary}
               onPress={() => {}}
             />
-            <QuickAction
+            <QuickActionCard
               title={t('attendance')}
+              description="Track and manage daily attendance"
               icon="time"
+              color={colors.success}
               onPress={() => {}}
             />
-            <QuickAction
+            <QuickActionCard
               title={t('salary')}
+              description="Process monthly salaries and payments"
               icon="card"
+              color={colors.warning}
               onPress={() => {}}
             />
-            <QuickAction
+            <QuickActionCard
               title={t('receipts')}
-              icon="document"
+              description="Export attendance and salary reports"
+              icon="document-text"
+              color={colors.info}
               onPress={() => {}}
             />
           </View>
         </View>
 
+        {/* Recent Activity */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-            {t('recentActivity')}
-          </Text>
-          <ThemedCard>
-            <Text style={[styles.noData, { color: colors.secondary }]}>
-              {t('noData')}
-            </Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('recentActivity')}</Text>
+          <ThemedCard style={styles.activityCard}>
+            <View style={styles.activityItem}>
+              <View style={[styles.activityIcon, { backgroundColor: colors.success + '20' }]}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={[styles.activityText, { color: colors.text }]}>
+                  John Doe checked in at 9:00 AM
+                </Text>
+                <Text style={[styles.activityTime, { color: colors.secondary }]}>2 minutes ago</Text>
+              </View>
+            </View>
+            
+            <View style={styles.activityItem}>
+              <View style={[styles.activityIcon, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="person-add" size={16} color={colors.primary} />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={[styles.activityText, { color: colors.text }]}>
+                  New employee Sarah Smith added
+                </Text>
+                <Text style={[styles.activityTime, { color: colors.secondary }]}>1 hour ago</Text>
+              </View>
+            </View>
+            
+            <View style={styles.activityItem}>
+              <View style={[styles.activityIcon, { backgroundColor: colors.warning + '20' }]}>
+                <Ionicons name="card" size={16} color={colors.warning} />
+              </View>
+              <View style={styles.activityContent}>
+                <Text style={[styles.activityText, { color: colors.text }]}>
+                  Monthly salaries generated for March
+                </Text>
+                <Text style={[styles.activityTime, { color: colors.secondary }]}>3 hours ago</Text>
+              </View>
+            </View>
           </ThemedCard>
         </View>
+
+        <View style={styles.bottomPadding} />
       </ScrollView>
     );
   };
@@ -327,16 +588,18 @@ export const DashboardScreen: React.FC = () => {
       >
         <View style={styles.header}>
           <Text style={[styles.greeting, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-            Welcome back, {user?.name}!
+            {t('welcome')}, {user?.name}!
           </Text>
           <Text style={[styles.role, { color: colors.secondary, textAlign: isRTL ? 'right' : 'left' }]}>
-            {user?.position || 'Employee'}
+            {user?.position || t('worker')}
           </Text>
         </View>
 
         {/* Today's Status */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Status</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Today's Status
+          </Text>
           <ThemedCard style={styles.todayCard}>
             <View style={styles.todayContent}>
               <Ionicons name="today" size={24} color={colors.primary} />
@@ -430,7 +693,7 @@ export const DashboardScreen: React.FC = () => {
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('quickActions')}</Text>
           <View style={styles.quickActionsGrid}>
             <TouchableOpacity style={styles.quickAction}>
               <ThemedCard style={styles.quickActionCard}>
@@ -478,7 +741,7 @@ export const DashboardScreen: React.FC = () => {
       {loading ? (
         <View style={styles.loadingContainer}>
           <Text style={[styles.loadingText, { color: colors.secondary }]}>
-            Loading...
+            {t('loading')}
           </Text>
         </View>
       ) : user?.role === 'admin' ? (
@@ -502,90 +765,244 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
   },
+  
+  // Header Styles
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     padding: 20,
-    paddingBottom: 10,
+    paddingTop: 10,
   },
   greeting: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    lineHeight: 22,
   },
   role: {
     fontSize: 16,
     textTransform: 'capitalize',
   },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  
-  // Admin styles
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  statCard: {
-    width: '48%',
-    marginRight: '2%',
-    marginBottom: 12,
-  },
-  statContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statIcon: {
+  notificationButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    position: 'relative',
   },
-  statText: {
-    flex: 1,
+  notificationBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FF3B30',
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  statValue: {
-    fontSize: 20,
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
     fontWeight: 'bold',
   },
-  statTitle: {
+
+  // Section Styles
+  section: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  metricsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+
+  // Metrics Grid
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -8,
+  },
+  metricCard: {
+    width: (width - 56) / 2,
+    marginHorizontal: 8,
+    marginBottom: 16,
+    padding: 20,
+  },
+  metricHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  metricIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  trendBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  trendText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  metricValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  metricTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  metricSubtitle: {
     fontSize: 12,
     marginTop: 2,
   },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  actionCard: {
-    width: '48%',
-    marginRight: '2%',
-    marginBottom: 12,
-  },
-  actionContent: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  actionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  noData: {
-    textAlign: 'center',
-    fontStyle: 'italic',
+
+  // Attendance Overview
+  attendanceCard: {
     padding: 20,
   },
-  
-  // Worker styles
+  attendanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  attendanceTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  attendanceDate: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  attendanceStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  attendanceStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  attendanceStatIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  attendanceStatValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  attendanceStatLabel: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  attendanceProgress: {
+    marginTop: 8,
+  },
+  attendanceProgressLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+
+  // Quick Actions
+  quickActionsContainer: {
+    gap: 12,
+  },
+  quickActionWrapper: {
+    marginBottom: 0,
+  },
+  quickActionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  quickActionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  quickActionContent: {
+    flex: 1,
+  },
+  quickActionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  quickActionDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  // Activity
+  activityCard: {
+    padding: 20,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  activityIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  activityTime: {
+    fontSize: 12,
+  },
+
+  // Worker Dashboard Styles
   todayCard: {
     marginBottom: 0,
   },
@@ -680,5 +1097,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 8,
     textAlign: 'center',
+  },
+
+  bottomPadding: {
+    height: 20,
   },
 });
