@@ -7,11 +7,12 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build:web": "if not exist public mkdir public && if exist web-build (xcopy web-build\\* public\\ /E /Y) else (echo web-build not found, creating placeholder && echo ^<h1^>App Building...^</h1^> > public\\index.html)",
     "build": "cd backend && npm run build",
      "backend": "cd backend && npm start",
     "backend:dev": "cd backend && npm run dev",
-    "predeploy": "expo export:web",
-    "deploy": "gh-pages -d web-build"
+    "predeploy": "npm run web:build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",

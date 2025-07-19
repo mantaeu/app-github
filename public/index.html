@@ -1,0 +1,271 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mantaevert HR System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 40px;
+            background: #111111;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(255, 102, 0, 0.3);
+            border: 2px solid #ff6600;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #ff6600 0%, #ff8533 100%);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: bold;
+            color: #000000;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #ff6600;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #cccccc;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #222;
+            color: white;
+            font-size: 16px;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #ff6600;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: #ff6600;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            background: #ff8533;
+        }
+        
+        .btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .success {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+        }
+        
+        .error {
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+        }
+        
+        .features {
+            margin-top: 30px;
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+        }
+        
+        .download-section {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #333;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 5px;
+            font-size: 14px;
+        }
+        
+        .download-btn:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">M</div>
+        <h1>Mantaevert HR System</h1>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="btn" id="loginBtn">Login</button>
+        </form>
+        
+        <div id="message"></div>
+        
+        <div class="features">
+            Features: Employee Management • Attendance Tracking • Salary Management • PDF Reports
+        </div>
+        
+        <div class="download-section">
+            <a href="#" class="download-btn">📱 Download Android APK</a>
+            <a href="https://github.com/mantaeu/mantaevert-hr-app" class="download-btn">📁 View Source Code</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://app-github-sbnv-meeeeee.vercel.app/api';
+        
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const messageDiv = document.getElementById('message');
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+            messageDiv.innerHTML = '';
+            
+            try {
+                const response = await fetch(API_BASE_URL + '/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.user) {
+                    messageDiv.innerHTML = '<div class="success">✅ Login successful! Welcome ' + data.user.name + '</div>';
+                    
+                    // Store token and redirect to dashboard
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    setTimeout(() => {
+                        // Create a simple dashboard
+                        showDashboard(data.user);
+                    }, 1000);
+                } else {
+                    messageDiv.innerHTML = '<div class="error">❌ ' + (data.message || 'Login failed') + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="error">❌ Connection error. Please try again.</div>';
+                console.error('Login error:', error);
+            }
+            
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Login';
+        });
+        
+        function showDashboard(user) {
+            document.body.innerHTML = `
+                <div class="container">
+                    <div class="logo">M</div>
+                    <h1>Welcome, ${user.name}!</h1>
+                    <p style="text-align: center; margin-bottom: 30px;">Role: ${user.role}</p>
+                    
+                    <div style="text-align: center;">
+                        <h3 style="color: #ff6600; margin-bottom: 20px;">HR Management Features</h3>
+                        <div style="background: #222; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                            <p>✅ Employee Management</p>
+                            <p>✅ Attendance Tracking</p>
+                            <p>✅ Salary Management</p>
+                            <p>✅ PDF Report Generation</p>
+                            <p>✅ Real-time Dashboard</p>
+                        </div>
+                        
+                        <button class="btn" onclick="logout()">Logout</button>
+                    </div>
+                    
+                    <div class="features">
+                        API Connected: ${API_BASE_URL}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            location.reload();
+        }
+        
+        // Check if user is already logged in
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('authToken');
+            const user = localStorage.getItem('user');
+            
+            if (token && user) {
+                showDashboard(JSON.parse(user));
+            }
+        });
+    </script>
+</body>
+</html>
