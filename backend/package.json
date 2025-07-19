@@ -11,7 +11,6 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@sparticuz/chromium": "^129.0.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -22,8 +21,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.0",
     "node-cron": "^3.0.3",
-    "pdfkit": "^0.14.0",
-    "puppeteer-core": "^23.5.3"
+    "pdfkit": "^0.14.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -33,7 +31,6 @@
     "@types/node": "^20.8.0",
     "@types/node-cron": "^3.0.11",
     "@types/pdfkit": "^0.12.12",
-    "@types/puppeteer-core": "^5.4.0",
     "@vercel/node": "^3.2.29",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
