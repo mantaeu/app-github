@@ -138,13 +138,6 @@ class ApiService {
     });
   }
 
-  async checkoutUser(userId: string): Promise<ApiResponse<{ salary: SalaryRecord; receipt: Receipt }>> {
-    return this.request('/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ userId }),
-    });
-  }
-
   // Attendance
   async getAttendance(userId?: string): Promise<ApiResponse<AttendanceRecord[]>> {
     const endpoint = userId ? `/attendance?userId=${userId}` : '/attendance';
@@ -215,10 +208,6 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ userId, month, year }),
     });
-  }
-
-  async getReceipt(id: string): Promise<ApiResponse<Receipt>> {
-    return this.request(`/receipts/${id}`);
   }
 
   // Dashboard
@@ -334,6 +323,14 @@ class ApiService {
     const blob = await response.blob();
     const filename = `all-receipts-${new Date().toISOString().split('T')[0]}-${language}.pdf`;
     await this.downloadPDF(blob, filename);
+  }
+
+  // Checkout user salary
+  async checkoutUser(userId: string, data: { month: string; year: number }): Promise<ApiResponse<{
+    salaryRecord: any;
+    receipt: any;
+  }>> {
+    return this.checkoutMonthlySalary(userId, data.month, data.year);
   }
 }
 
