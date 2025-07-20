@@ -174,7 +174,7 @@ const pdfTranslations = {
     details: 'التفاصيل',
     workingDays: 'أيام العمل',
     presentDays: 'أيام الحضور',
-    absentDays: 'أيام ��لغياب',
+    absentDays: 'أيام الغياب',
     hoursWorked: 'ساعات العمل',
     totalDays: 'إجمالي الأيام',
     daysAttended: 'أيام الحضور',
@@ -209,6 +209,31 @@ const pdfTranslations = {
 export type Language = 'en' | 'fr' | 'ar';
 
 export class PDFService {
+  // Helper method to determine if language is RTL
+  private static isRTL(language: Language): boolean {
+    return language === 'ar';
+  }
+
+  // Helper method to get text alignment based on language
+  private static getTextAlign(language: Language): 'left' | 'right' | 'center' {
+    return this.isRTL(language) ? 'right' : 'left';
+  }
+
+  // Helper method to get appropriate margins for RTL
+  private static getMargins(language: Language, pageWidth: number) {
+    const isRTL = this.isRTL(language);
+    return {
+      leftMargin: isRTL ? 50 : 50,
+      rightMargin: isRTL ? 50 : 50,
+      contentWidth: pageWidth,
+      labelX: isRTL ? pageWidth - 120 : 50,
+      valueX: isRTL ? pageWidth - 250 : 170,
+      tableDescX: isRTL ? pageWidth - 150 : 60,
+      tableAmountX: isRTL ? pageWidth - 300 : 250,
+      tableTypeX: isRTL ? pageWidth - 450 : 400
+    };
+  }
+
   // Individual Salary Slip PDF Generation
   static async generateIndividualSalarySlipPDF(salaryId: string, language: Language = 'en'): Promise<Buffer> {
     try {
@@ -260,7 +285,7 @@ export class PDFService {
     }
   }
 
-  // Create individual salary slip PDF
+  // Create individual salary slip PDF with RTL support
   private static createSalarySlipPDF(salary: any, user: any, language: Language = 'en'): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
@@ -279,30 +304,42 @@ export class PDFService {
         doc.on('end', () => resolve(Buffer.concat(buffers)));
 
         const pageWidth = doc.page.width - 100;
-        const leftMargin = 50;
+        const isRTL = this.isRTL(language);
+        const margins = this.getMargins(language, pageWidth);
         const t = pdfTranslations[language];
 
-        // Header
+        // Header - Company name always LTR
         doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
-        doc.text('MANTAEVERT', leftMargin, 50);
+        doc.text('MANTAEVERT', isRTL ? pageWidth - 200 : 50, 50);
+        
         doc.fontSize(12).fillColor('#000000').font('Helvetica');
-        doc.text(t.humanResourcesManagementSystem, leftMargin, 90);
+        doc.text(t.humanResourcesManagementSystem, isRTL ? 50 : 50, 90, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
         
         // Document Title
         doc.fontSize(20).fillColor('#000000').font('Helvetica-Bold');
-        doc.text(t.salarySlip, leftMargin, 120);
+        doc.text(t.salarySlip, 50, 120, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
         
-        // Document Info
+        // Document Info - Always on the right for all languages
         doc.fontSize(10).fillColor('#000000').font('Helvetica');
-        doc.text(`${t.period} ${salary.month} ${salary.year}`, pageWidth - 100, 50);
-        doc.text(`${t.slipNumber} ${salary._id.toString().slice(-8).toUpperCase()}`, pageWidth - 100, 65);
-        doc.text(`${t.date} ${new Date().toLocaleDateString()}`, pageWidth - 100, 80);
+        const infoX = pageWidth - 100;
+        doc.text(`${t.period} ${salary.month} ${salary.year}`, infoX, 50);
+        doc.text(`${t.slipNumber} ${salary._id.toString().slice(-8).toUpperCase()}`, infoX, 65);
+        doc.text(`${t.date} ${new Date().toLocaleDateString()}`, infoX, 80);
 
         let currentY = 160;
 
         // Employee Information
         doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
-        doc.text(t.employeeInformation, leftMargin, currentY);
+        doc.text(t.employeeInformation, 50, currentY, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
         currentY += 20;
 
         const empData = [
@@ -315,9 +352,16 @@ export class PDFService {
 
         empData.forEach(([label, value]) => {
           doc.fontSize(10).fillColor('#000000').font('Helvetica-Bold');
-          doc.text(label, leftMargin, currentY, { width: 120 });
-          doc.font('Helvetica');
-          doc.text(value, leftMargin + 120, currentY);
+          if (isRTL) {
+            // RTL layout: value on left, label on right
+            doc.text(value, 50, currentY, { width: 200 });
+            doc.text(label, pageWidth - 150, currentY, { width: 150, align: 'right' });
+          } else {
+            // LTR layout: label on left, value on right
+            doc.text(label, 50, currentY, { width: 120 });
+            doc.font('Helvetica');
+            doc.text(value, 170, currentY);
+          }
           currentY += 15;
         });
 
@@ -325,15 +369,27 @@ export class PDFService {
 
         // Salary Breakdown Table
         doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
-        doc.text(t.salaryBreakdown, leftMargin, currentY);
+        doc.text(t.salaryBreakdown, 50, currentY, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
         currentY += 25;
 
         // Table Header
-        doc.rect(leftMargin, currentY, pageWidth, 25).fill('#FF6600');
+        doc.rect(50, currentY, pageWidth, 25).fill('#FF6600');
         doc.fontSize(11).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text(t.description, leftMargin + 10, currentY + 8);
-        doc.text(t.amount, leftMargin + 250, currentY + 8);
-        doc.text(t.type, leftMargin + 400, currentY + 8);
+        
+        if (isRTL) {
+          // RTL table headers
+          doc.text(t.type, 60, currentY + 8, { width: 100, align: 'right' });
+          doc.text(t.amount, 200, currentY + 8, { width: 100, align: 'right' });
+          doc.text(t.description, pageWidth - 150, currentY + 8, { width: 140, align: 'right' });
+        } else {
+          // LTR table headers
+          doc.text(t.description, 60, currentY + 8);
+          doc.text(t.amount, 250, currentY + 8);
+          doc.text(t.type, 400, currentY + 8);
+        }
         currentY += 25;
 
         // Table Rows
@@ -346,73 +402,77 @@ export class PDFService {
 
         salaryData.forEach(([desc, amount, type], index) => {
           const bgColor = index % 2 === 0 ? '#F8F9FA' : '#FFFFFF';
-          doc.rect(leftMargin, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
+          doc.rect(50, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
           doc.fontSize(10).fillColor('#000000').font('Helvetica');
-          doc.text(desc, leftMargin + 10, currentY + 6);
-          doc.text(`${amount} DH`, leftMargin + 250, currentY + 6);
-          doc.text(type, leftMargin + 400, currentY + 6);
+          
+          if (isRTL) {
+            // RTL table data
+            doc.text(type, 60, currentY + 6, { width: 100, align: 'right' });
+            doc.text(`${amount} DH`, 200, currentY + 6, { width: 100, align: 'right' });
+            doc.text(desc, pageWidth - 150, currentY + 6, { width: 140, align: 'right' });
+          } else {
+            // LTR table data
+            doc.text(desc, 60, currentY + 6);
+            doc.text(`${amount} DH`, 250, currentY + 6);
+            doc.text(type, 400, currentY + 6);
+          }
           currentY += 20;
         });
 
         // Total Section
         currentY += 10;
-        doc.rect(leftMargin, currentY, pageWidth, 30).fill('#FF6600');
+        doc.rect(50, currentY, pageWidth, 30).fill('#FF6600');
         doc.fontSize(14).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text(t.netSalary, leftMargin + 10, currentY + 8);
-        doc.text(`${(salary.totalSalary || 0).toFixed(2)} DH`, leftMargin + 250, currentY + 8);
-        currentY += 50;
-
-        // Attendance Summary (if available)
-        if (salary.presentDays !== undefined) {
-          doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
-          doc.text(t.attendanceSummary, leftMargin, currentY);
-          currentY += 25;
-
-          doc.rect(leftMargin, currentY, pageWidth, 25).fill('#FF6600');
-          doc.fontSize(11).fillColor('#FFFFFF').font('Helvetica-Bold');
-          doc.text(t.metric, leftMargin + 10, currentY + 8);
-          doc.text(t.count, leftMargin + 200, currentY + 8);
-          doc.text(t.details, leftMargin + 300, currentY + 8);
-          currentY += 25;
-
-          const attData = [
-            [t.workingDays, salary.totalWorkingDays || 0, t.totalDays],
-            [t.presentDays, salary.presentDays || 0, t.daysAttended],
-            [t.absentDays, salary.absentDays || 0, t.daysMissed],
-            [t.hoursWorked, `${(salary.totalHoursWorked || 0).toFixed(1)}h`, t.totalHours]
-          ];
-
-          attData.forEach(([metric, count, details], index) => {
-            const bgColor = index % 2 === 0 ? '#F8F9FA' : '#FFFFFF';
-            doc.rect(leftMargin, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
-            doc.fontSize(10).fillColor('#000000').font('Helvetica');
-            doc.text(metric, leftMargin + 10, currentY + 6);
-            doc.text(count.toString(), leftMargin + 200, currentY + 6);
-            doc.text(details, leftMargin + 300, currentY + 6);
-            currentY += 20;
-          });
-          currentY += 20;
+        
+        if (isRTL) {
+          doc.text(`${(salary.totalSalary || 0).toFixed(2)} DH`, 200, currentY + 8, { width: 100, align: 'right' });
+          doc.text(t.netSalary, pageWidth - 150, currentY + 8, { width: 140, align: 'right' });
+        } else {
+          doc.text(t.netSalary, 60, currentY + 8);
+          doc.text(`${(salary.totalSalary || 0).toFixed(2)} DH`, 250, currentY + 8);
         }
+        currentY += 50;
 
         // Signatures
         doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold');
-        doc.text(t.authorizedSignatures, leftMargin, currentY);
+        doc.text(t.authorizedSignatures, 50, currentY, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
         currentY += 30;
 
         doc.fontSize(10).fillColor('#000000').font('Helvetica');
-        doc.text(t.hrDepartment, leftMargin, currentY);
-        doc.moveTo(leftMargin, currentY + 30).lineTo(leftMargin + 150, currentY + 30).stroke('#000000');
-        doc.text(t.signatureDate, leftMargin, currentY + 35);
+        if (isRTL) {
+          // RTL signatures
+          doc.text(t.employee, pageWidth - 150, currentY, { width: 140, align: 'right' });
+          doc.moveTo(pageWidth - 150, currentY + 30).lineTo(pageWidth - 10, currentY + 30).stroke('#000000');
+          doc.text(`${user.name}`, pageWidth - 150, currentY + 35, { width: 140, align: 'right' });
 
-        doc.text(t.employee, leftMargin + 300, currentY);
-        doc.moveTo(leftMargin + 300, currentY + 30).lineTo(leftMargin + 450, currentY + 30).stroke('#000000');
-        doc.text(`${user.name}`, leftMargin + 300, currentY + 35);
+          doc.text(t.hrDepartment, 50, currentY, { width: 150 });
+          doc.moveTo(50, currentY + 30).lineTo(200, currentY + 30).stroke('#000000');
+          doc.text(t.signatureDate, 50, currentY + 35);
+        } else {
+          // LTR signatures
+          doc.text(t.hrDepartment, 50, currentY);
+          doc.moveTo(50, currentY + 30).lineTo(200, currentY + 30).stroke('#000000');
+          doc.text(t.signatureDate, 50, currentY + 35);
+
+          doc.text(t.employee, 300, currentY);
+          doc.moveTo(300, currentY + 30).lineTo(450, currentY + 30).stroke('#000000');
+          doc.text(`${user.name}`, 300, currentY + 35);
+        }
 
         // Footer
         currentY += 80;
         doc.fontSize(8).fillColor('#666666').font('Helvetica');
-        doc.text(t.computerGeneratedDocument, leftMargin, currentY);
-        doc.text(`${t.generatedOn} ${new Date().toLocaleString()}`, leftMargin, currentY + 12);
+        doc.text(t.computerGeneratedDocument, 50, currentY, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
+        doc.text(`${t.generatedOn} ${new Date().toLocaleString()}`, 50, currentY + 12, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
 
         doc.end();
       } catch (error) {
@@ -421,7 +481,7 @@ export class PDFService {
     });
   }
 
-  // Create individual receipt PDF
+  // Create individual receipt PDF with RTL support
   private static createReceiptPDF(receipt: any, user: any, language: Language = 'en'): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
@@ -440,30 +500,41 @@ export class PDFService {
         doc.on('end', () => resolve(Buffer.concat(buffers)));
 
         const pageWidth = doc.page.width - 100;
-        const leftMargin = 50;
+        const isRTL = this.isRTL(language);
         const t = pdfTranslations[language];
 
-        // Header
+        // Header - Company name always LTR
         doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
-        doc.text('MANTAEVERT', leftMargin, 50);
+        doc.text('MANTAEVERT', isRTL ? pageWidth - 200 : 50, 50);
+        
         doc.fontSize(12).fillColor('#000000').font('Helvetica');
-        doc.text(t.humanResourcesManagementSystem, leftMargin, 90);
+        doc.text(t.humanResourcesManagementSystem, 50, 90, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
         
         // Document Title
         doc.fontSize(20).fillColor('#000000').font('Helvetica-Bold');
-        doc.text(t.paymentReceipt, leftMargin, 120);
+        doc.text(t.paymentReceipt, 50, 120, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
         
-        // Document Info
+        // Document Info - Always on the right
         doc.fontSize(10).fillColor('#000000').font('Helvetica');
-        doc.text(`${t.receiptNumber} ${receipt._id.toString().slice(-8).toUpperCase()}`, pageWidth - 100, 50);
-        doc.text(`${t.date} ${new Date(receipt.date).toLocaleDateString()}`, pageWidth - 100, 65);
-        doc.text(`${t.time} ${new Date(receipt.date).toLocaleTimeString()}`, pageWidth - 100, 80);
+        const infoX = pageWidth - 100;
+        doc.text(`${t.receiptNumber} ${receipt._id.toString().slice(-8).toUpperCase()}`, infoX, 50);
+        doc.text(`${t.date} ${new Date(receipt.date).toLocaleDateString()}`, infoX, 65);
+        doc.text(`${t.time} ${new Date(receipt.date).toLocaleTimeString()}`, infoX, 80);
 
         let currentY = 160;
 
         // Recipient Information
         doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
-        doc.text(t.recipientInformation, leftMargin, currentY);
+        doc.text(t.recipientInformation, 50, currentY, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
         currentY += 20;
 
         const recipientData = [
@@ -475,23 +546,55 @@ export class PDFService {
 
         recipientData.forEach(([label, value]) => {
           doc.fontSize(10).fillColor('#000000').font('Helvetica-Bold');
-          doc.text(label, leftMargin, currentY, { width: 120 });
-          doc.font('Helvetica');
-          doc.text(value, leftMargin + 120, currentY);
+          if (isRTL) {
+            // RTL layout
+            doc.text(value, 50, currentY, { width: 200 });
+            doc.text(label, pageWidth - 150, currentY, { width: 150, align: 'right' });
+          } else {
+            // LTR layout
+            doc.text(label, 50, currentY, { width: 120 });
+            doc.font('Helvetica');
+            doc.text(value, 170, currentY);
+          }
           currentY += 15;
         });
 
         currentY += 30;
 
+        // Amount Section - Always on the right side for visual impact
+        const amountBoxWidth = 200;
+        const amountBoxX = pageWidth - amountBoxWidth + 50;
+        doc.rect(amountBoxX, currentY, amountBoxWidth, 35).fill('#FF6600');
+        doc.fontSize(12).fillColor('#FFFFFF').font('Helvetica-Bold');
+        doc.text(t.totalAmount, amountBoxX + 15, currentY + 6, {
+          width: amountBoxWidth - 30,
+          align: isRTL ? 'right' : 'left'
+        });
+        doc.fontSize(18);
+        doc.text(`${(receipt.amount || 0).toFixed(2)} DH`, amountBoxX + 15, currentY + 18, {
+          width: amountBoxWidth - 30,
+          align: isRTL ? 'right' : 'left'
+        });
+        currentY += 50;
+
         // Payment Details
         doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
-        doc.text(t.paymentDetails, leftMargin, currentY);
+        doc.text(t.paymentDetails, 50, currentY, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
         currentY += 25;
 
-        doc.rect(leftMargin, currentY, pageWidth, 25).fill('#FF6600');
+        doc.rect(50, currentY, pageWidth, 25).fill('#FF6600');
         doc.fontSize(11).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text(t.description, leftMargin + 10, currentY + 8);
-        doc.text(t.information, leftMargin + 250, currentY + 8);
+        
+        if (isRTL) {
+          doc.text(t.information, 60, currentY + 8, { width: 200, align: 'right' });
+          doc.text(t.description, pageWidth - 150, currentY + 8, { width: 140, align: 'right' });
+        } else {
+          doc.text(t.description, 60, currentY + 8);
+          doc.text(t.information, 250, currentY + 8);
+        }
         currentY += 25;
 
         const paymentData = [
@@ -503,57 +606,77 @@ export class PDFService {
 
         paymentData.forEach(([desc, info], index) => {
           const bgColor = index % 2 === 0 ? '#F8F9FA' : '#FFFFFF';
-          doc.rect(leftMargin, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
+          doc.rect(50, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
           doc.fontSize(10).fillColor('#000000').font('Helvetica');
-          doc.text(desc, leftMargin + 10, currentY + 6);
-          doc.text(info, leftMargin + 250, currentY + 6);
+          
+          if (isRTL) {
+            doc.text(info, 60, currentY + 6, { width: 200, align: 'right' });
+            doc.text(desc, pageWidth - 150, currentY + 6, { width: 140, align: 'right' });
+          } else {
+            doc.text(desc, 60, currentY + 6);
+            doc.text(info, 250, currentY + 6);
+          }
           currentY += 20;
         });
 
         currentY += 15;
 
-        // Amount Section (right side)
-        const amountBoxWidth = 200;
-        const amountBoxX = leftMargin + pageWidth - amountBoxWidth;
-        doc.rect(amountBoxX, currentY, amountBoxWidth, 35).fill('#FF6600');
-        doc.fontSize(12).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text(t.totalAmount, amountBoxX + 15, currentY + 6);
-        doc.fontSize(18);
-        doc.text(`${(receipt.amount || 0).toFixed(2)} DH`, amountBoxX + 15, currentY + 18);
-        currentY += 50;
-
         // Description Section
         doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
-        doc.text(t.description, leftMargin, currentY);
+        doc.text(t.description, 50, currentY, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
         currentY += 20;
 
-        doc.rect(leftMargin, currentY, pageWidth, 40).fill('#F8F9FA').stroke('#E0E0E0');
+        doc.rect(50, currentY, pageWidth, 40).fill('#F8F9FA').stroke('#E0E0E0');
         doc.fontSize(10).fillColor('#000000').font('Helvetica');
-        doc.text(receipt.description || t.noDescriptionProvided, leftMargin + 10, currentY + 10, {
+        doc.text(receipt.description || t.noDescriptionProvided, 60, currentY + 10, {
           width: pageWidth - 20,
-          align: 'left'
+          align: isRTL ? 'right' : 'left'
         });
         currentY += 60;
 
         // Signatures
         doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold');
-        doc.text(t.authorizedSignatures, leftMargin, currentY);
+        doc.text(t.authorizedSignatures, 50, currentY, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
         currentY += 30;
 
         doc.fontSize(10).fillColor('#000000').font('Helvetica');
-        doc.text(t.hrDepartment, leftMargin, currentY);
-        doc.moveTo(leftMargin, currentY + 30).lineTo(leftMargin + 150, currentY + 30).stroke('#000000');
-        doc.text(t.signatureDate, leftMargin, currentY + 35);
+        if (isRTL) {
+          // RTL signatures
+          doc.text(t.recipient, pageWidth - 150, currentY, { width: 140, align: 'right' });
+          doc.moveTo(pageWidth - 150, currentY + 30).lineTo(pageWidth - 10, currentY + 30).stroke('#000000');
+          doc.text(`${user.name}`, pageWidth - 150, currentY + 35, { width: 140, align: 'right' });
 
-        doc.text(t.recipient, leftMargin + 300, currentY);
-        doc.moveTo(leftMargin + 300, currentY + 30).lineTo(leftMargin + 450, currentY + 30).stroke('#000000');
-        doc.text(`${user.name}`, leftMargin + 300, currentY + 35);
+          doc.text(t.hrDepartment, 50, currentY, { width: 150 });
+          doc.moveTo(50, currentY + 30).lineTo(200, currentY + 30).stroke('#000000');
+          doc.text(t.signatureDate, 50, currentY + 35);
+        } else {
+          // LTR signatures
+          doc.text(t.hrDepartment, 50, currentY);
+          doc.moveTo(50, currentY + 30).lineTo(200, currentY + 30).stroke('#000000');
+          doc.text(t.signatureDate, 50, currentY + 35);
+
+          doc.text(t.recipient, 300, currentY);
+          doc.moveTo(300, currentY + 30).lineTo(450, currentY + 30).stroke('#000000');
+          doc.text(`${user.name}`, 300, currentY + 35);
+        }
 
         // Footer
         currentY += 80;
         doc.fontSize(8).fillColor('#666666').font('Helvetica');
-        doc.text(t.computerGeneratedReceipt, leftMargin, currentY);
-        doc.text(`${t.generatedOn} ${new Date().toLocaleString()}`, leftMargin, currentY + 12);
+        doc.text(t.computerGeneratedReceipt, 50, currentY, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
+        doc.text(`${t.generatedOn} ${new Date().toLocaleString()}`, 50, currentY + 12, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
 
         doc.end();
       } catch (error) {
@@ -562,7 +685,7 @@ export class PDFService {
     });
   }
 
-  // Create all salaries PDF
+  // Create all salaries PDF with RTL support
   private static createAllSalariesPDF(salaryRecords: any[], language: Language = 'en'): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
@@ -571,15 +694,25 @@ export class PDFService {
         doc.on('data', buffers.push.bind(buffers));
         doc.on('end', () => resolve(Buffer.concat(buffers)));
 
+        const pageWidth = doc.page.width - 100;
+        const isRTL = this.isRTL(language);
         const t = pdfTranslations[language];
 
         // Header
         doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
-        doc.text('MANTAEVERT', 50, 50);
+        doc.text('MANTAEVERT', isRTL ? pageWidth - 200 : 50, 50);
+        
         doc.fontSize(18).fillColor('#000000').font('Helvetica-Bold');
-        doc.text(t.allSalariesReport, 50, 100);
+        doc.text(t.allSalariesReport, 50, 100, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
+        
         doc.fontSize(12).fillColor('#000000').font('Helvetica');
-        doc.text(`${t.generatedOn} ${new Date().toLocaleDateString()}`, 50, 125);
+        doc.text(`${t.generatedOn} ${new Date().toLocaleDateString()}`, 50, 125, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
 
         let yPos = 160;
         salaryRecords.forEach((salary, index) => {
@@ -589,10 +722,21 @@ export class PDFService {
           }
           const user = salary.userId as any;
           doc.fontSize(12).fillColor('#FF6600').font('Helvetica-Bold');
-          doc.text(`${index + 1}. ${user.name}`, 50, yPos);
-          yPos += 15;
-          doc.fontSize(10).fillColor('#000000').font('Helvetica');
-          doc.text(`${salary.month} ${salary.year} - ${t.total} ${salary.totalSalary?.toFixed(2) || '0.00'} DH`, 70, yPos);
+          
+          const entryText = `${index + 1}. ${user.name}`;
+          const detailText = `${salary.month} ${salary.year} - ${t.total} ${salary.totalSalary?.toFixed(2) || '0.00'} DH`;
+          
+          if (isRTL) {
+            doc.text(entryText, 50, yPos, { width: pageWidth, align: 'right' });
+            yPos += 15;
+            doc.fontSize(10).fillColor('#000000').font('Helvetica');
+            doc.text(detailText, 50, yPos, { width: pageWidth, align: 'right' });
+          } else {
+            doc.text(entryText, 50, yPos);
+            yPos += 15;
+            doc.fontSize(10).fillColor('#000000').font('Helvetica');
+            doc.text(detailText, 70, yPos);
+          }
           yPos += 25;
         });
 
@@ -603,7 +747,7 @@ export class PDFService {
     });
   }
 
-  // Create all receipts PDF
+  // Create all receipts PDF with RTL support
   private static createAllReceiptsPDF(receipts: any[], language: Language = 'en'): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
@@ -612,15 +756,25 @@ export class PDFService {
         doc.on('data', buffers.push.bind(buffers));
         doc.on('end', () => resolve(Buffer.concat(buffers)));
 
+        const pageWidth = doc.page.width - 100;
+        const isRTL = this.isRTL(language);
         const t = pdfTranslations[language];
 
         // Header
         doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
-        doc.text('MANTAEVERT', 50, 50);
+        doc.text('MANTAEVERT', isRTL ? pageWidth - 200 : 50, 50);
+        
         doc.fontSize(18).fillColor('#000000').font('Helvetica-Bold');
-        doc.text(t.allReceiptsReport, 50, 100);
+        doc.text(t.allReceiptsReport, 50, 100, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
+        
         doc.fontSize(12).fillColor('#000000').font('Helvetica');
-        doc.text(`${t.generatedOn} ${new Date().toLocaleDateString()}`, 50, 125);
+        doc.text(`${t.generatedOn} ${new Date().toLocaleDateString()}`, 50, 125, {
+          width: pageWidth,
+          align: isRTL ? 'right' : 'left'
+        });
 
         let yPos = 160;
         receipts.forEach((receipt, index) => {
@@ -630,10 +784,21 @@ export class PDFService {
           }
           const user = receipt.userId as any;
           doc.fontSize(12).fillColor('#FF6600').font('Helvetica-Bold');
-          doc.text(`${index + 1}. ${user.name}`, 50, yPos);
-          yPos += 15;
-          doc.fontSize(10).fillColor('#000000').font('Helvetica');
-          doc.text(`${receipt.type} - ${receipt.amount?.toFixed(2) || '0.00'} DH - ${new Date(receipt.date).toLocaleDateString()}`, 70, yPos);
+          
+          const entryText = `${index + 1}. ${user.name}`;
+          const detailText = `${receipt.type} - ${receipt.amount?.toFixed(2) || '0.00'} DH - ${new Date(receipt.date).toLocaleDateString()}`;
+          
+          if (isRTL) {
+            doc.text(entryText, 50, yPos, { width: pageWidth, align: 'right' });
+            yPos += 15;
+            doc.fontSize(10).fillColor('#000000').font('Helvetica');
+            doc.text(detailText, 50, yPos, { width: pageWidth, align: 'right' });
+          } else {
+            doc.text(entryText, 50, yPos);
+            yPos += 15;
+            doc.fontSize(10).fillColor('#000000').font('Helvetica');
+            doc.text(detailText, 70, yPos);
+          }
           yPos += 25;
         });
 
