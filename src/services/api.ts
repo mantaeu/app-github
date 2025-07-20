@@ -138,6 +138,13 @@ class ApiService {
     });
   }
 
+  async checkoutUser(userId: string): Promise<ApiResponse<{ salary: SalaryRecord; receipt: Receipt }>> {
+    return this.request('/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+  }
+
   // Attendance
   async getAttendance(userId?: string): Promise<ApiResponse<AttendanceRecord[]>> {
     const endpoint = userId ? `/attendance?userId=${userId}` : '/attendance';
@@ -208,6 +215,10 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ userId, month, year }),
     });
+  }
+
+  async getReceipt(id: string): Promise<ApiResponse<Receipt>> {
+    return this.request(`/receipts/${id}`);
   }
 
   // Dashboard

@@ -116,6 +116,21 @@ export const UsersScreen: React.FC = () => {
     loadUsers(); // Reload users after save
   }, []);
 
+  const handleCheckout = async (userId: string) => {
+    try {
+      const response = await apiService.checkoutUser(userId);
+      if (response.success) {
+        Alert.alert(t('success'), t('checkoutSuccess'));
+        // Optionally, you can navigate to the receipt page or show the receipt here
+      } else {
+        Alert.alert(t('error'), response.error || t('checkoutFailed'));
+      }
+    } catch (error) {
+      console.error('Error during checkout:', error);
+      Alert.alert(t('error'), t('checkoutFailed'));
+    }
+  };
+
   const UserCard: React.FC<{ user: User }> = React.memo(({ user }) => (
     <ThemedCard style={styles.userCard}>
       <View style={styles.userHeader}>
@@ -166,6 +181,13 @@ export const UsersScreen: React.FC = () => {
           <Text style={styles.actionButtonText}>{t('delete')}</Text>
         </TouchableOpacity>
       </View>
+      <TouchableOpacity
+        style={[styles.checkoutButton, { backgroundColor: colors.success }]}
+        onPress={() => handleCheckout(user._id)}
+      >
+        <Ionicons name="cash" size={16} color="#ffffff" />
+        <Text style={styles.actionButtonText}>{t('checkout')}</Text>
+      </TouchableOpacity>
     </ThemedCard>
   ));
 
@@ -315,6 +337,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     flex: 0.45,
     justifyContent: 'center',
+  },
+  checkoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    justifyContent: 'center',
+    marginTop: 8,
   },
   actionButtonText: {
     color: '#ffffff',

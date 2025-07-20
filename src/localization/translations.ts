@@ -2,6 +2,8 @@
 export const translations = {
   en: {
     // Authentication
+    checkoutSuccess: 'Checkout Successful',
+    checkoutFailed: 'Checkout Failed',
     login: 'Login',
     logout: 'Logout',
     email: 'Email',
