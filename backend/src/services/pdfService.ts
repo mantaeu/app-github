@@ -140,10 +140,10 @@ const pdfTranslations = {
   },
   ar: {
     salarySlip: 'قسيمة الراتب',
-    paymentReceipt: 'ايصال الدفع',
+    paymentReceipt: 'إيصال الدفع',
     allSalariesReport: 'تقرير جميع الرواتب',
-    allReceiptsReport: 'تقرير جميع الايصالات',
-    humanResourcesManagementSystem: 'نظام ادارة الموارد البشرية',
+    allReceiptsReport: 'تقرير جميع الإيصالات',
+    humanResourcesManagementSystem: 'نظام إدارة الموارد البشرية',
     employeeInformation: 'معلومات الموظف',
     recipientInformation: 'معلومات المستلم',
     employeeName: 'اسم الموظف:',
@@ -152,34 +152,34 @@ const pdfTranslations = {
     position: 'المنصب:',
     department: 'القسم:',
     status: 'الحالة:',
-    email: 'البريد الالكتروني:',
-    receiptType: 'نوع الايصال:',
+    email: 'البريد الإلكتروني:',
+    receiptType: 'نوع الإيصال:',
     salaryBreakdown: 'تفصيل الراتب',
     paymentDetails: 'تفاصيل الدفع',
     description: 'الوصف',
     amount: 'المبلغ (درهم)',
     information: 'المعلومات',
     type: 'النوع',
-    baseSalary: 'الراتب الاساسي',
-    overtimePay: 'اجر العمل الاضافي',
+    baseSalary: 'الراتب الأساسي',
+    overtimePay: 'أجر العمل الإضافي',
     bonuses: 'المكافآت',
     deductions: 'الخصومات',
     earning: 'كسب',
     deduction: 'خصم',
     netSalary: 'صافي الراتب:',
-    totalAmount: 'المبلغ الاجمالي:',
+    totalAmount: 'المبلغ الإجمالي:',
     attendanceSummary: 'ملخص الحضور',
     metric: 'المقياس',
     count: 'العدد',
     details: 'التفاصيل',
-    workingDays: 'ايام العمل',
-    presentDays: 'ايام الحضور',
-    absentDays: 'ايام الغياب',
+    workingDays: 'أيام العمل',
+    presentDays: 'أيام الحضور',
+    absentDays: 'أيام ��لغياب',
     hoursWorked: 'ساعات العمل',
-    totalDays: 'اجمالي الايام',
-    daysAttended: 'ايام الحضور',
-    daysMissed: 'ايام الغياب',
-    totalHours: 'اجمالي الساعات',
+    totalDays: 'إجمالي الأيام',
+    daysAttended: 'أيام الحضور',
+    daysMissed: 'أيام الغياب',
+    totalHours: 'إجمالي الساعات',
     authorizedSignatures: 'التوقيعات المعتمدة',
     hrDepartment: 'قسم الموارد البشرية',
     employee: 'الموظف',
@@ -191,12 +191,12 @@ const pdfTranslations = {
     completed: 'مكتمل ✓',
     companyTransfer: 'تحويل الشركة',
     noDescriptionProvided: 'لم يتم تقديم وصف',
-    computerGeneratedDocument: 'هذه وثيقة منشأة بواسطة الكمبيوتر. للاستفسارات، اتصل بالموارد البشرية',
-    computerGeneratedReceipt: 'هذا ايصال منشأ بواسطة الكمبيوتر. احتفظ بهذه الوثيقة لسجلاتك.',
-    generatedOn: 'تم الانشاء في',
+    computerGeneratedDocument: 'هذه وثيقة مُنشأة بواسطة الكمبيوتر. للاستفسارات، اتصل بالموارد البشرية على hr@mantaevert.com',
+    computerGeneratedReceipt: 'هذا إيصال مُنشأ بواسطة الكمبيوتر. احتفظ بهذه الوثيقة لسجلاتك.',
+    generatedOn: 'تم الإنشاء في',
     period: 'الفترة:',
     slipNumber: 'رقم القسيمة:',
-    receiptNumber: 'رقم الايصال:',
+    receiptNumber: 'رقم الإيصال:',
     date: 'التاريخ:',
     time: 'الوقت:',
     paid: 'مدفوع ✓',
@@ -209,21 +209,6 @@ const pdfTranslations = {
 export type Language = 'en' | 'fr' | 'ar';
 
 export class PDFService {
-  // Helper method to determine if language is RTL
-  private static isRTL(language: Language): boolean {
-    return language === 'ar';
-  }
-
-  // Helper method to safely render text (fallback for Arabic)
-  private static safeText(text: string, language: Language): string {
-    if (language === 'ar') {
-      // For Arabic, we'll use a simplified approach
-      // Remove complex Arabic characters that might not render properly
-      return text.replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0020-\u007F]/g, '');
-    }
-    return text;
-  }
-
   // Individual Salary Slip PDF Generation
   static async generateIndividualSalarySlipPDF(salaryId: string, language: Language = 'en'): Promise<Buffer> {
     try {
@@ -275,7 +260,7 @@ export class PDFService {
     }
   }
 
-  // Create individual salary slip PDF with improved Arabic support
+  // Create individual salary slip PDF
   private static createSalarySlipPDF(salary: any, user: any, language: Language = 'en'): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
@@ -294,78 +279,45 @@ export class PDFService {
         doc.on('end', () => resolve(Buffer.concat(buffers)));
 
         const pageWidth = doc.page.width - 100;
-        const isRTL = this.isRTL(language);
+        const leftMargin = 50;
         const t = pdfTranslations[language];
 
-        // Use default font for all languages (better Arabic support than custom fonts)
-        doc.font('Helvetica');
-
-        // Header - Company name always LTR
+        // Header
         doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
-        doc.text('MANTAEVERT', isRTL ? pageWidth - 200 : 50, 50);
-        
+        doc.text('MANTAEVERT', leftMargin, 50);
         doc.fontSize(12).fillColor('#000000').font('Helvetica');
-        const systemText = this.safeText(t.humanResourcesManagementSystem, language);
-        doc.text(systemText, 50, 90, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(t.humanResourcesManagementSystem, leftMargin, 90);
         
         // Document Title
         doc.fontSize(20).fillColor('#000000').font('Helvetica-Bold');
-        const titleText = this.safeText(t.salarySlip, language);
-        doc.text(titleText, 50, 120, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(t.salarySlip, leftMargin, 120);
         
-        // Document Info - Always on the right for all languages
+        // Document Info
         doc.fontSize(10).fillColor('#000000').font('Helvetica');
-        const infoX = pageWidth - 150;
-        doc.text(`${this.safeText(t.period, language)} ${salary.month} ${salary.year}`, infoX, 50, {
-          width: 150,
-          align: 'right'
-        });
-        doc.text(`${this.safeText(t.slipNumber, language)} ${salary._id.toString().slice(-8).toUpperCase()}`, infoX, 65, {
-          width: 150,
-          align: 'right'
-        });
-        doc.text(`${this.safeText(t.date, language)} ${new Date().toLocaleDateString()}`, infoX, 80, {
-          width: 150,
-          align: 'right'
-        });
+        doc.text(`${t.period} ${salary.month} ${salary.year}`, pageWidth - 100, 50);
+        doc.text(`${t.slipNumber} ${salary._id.toString().slice(-8).toUpperCase()}`, pageWidth - 100, 65);
+        doc.text(`${t.date} ${new Date().toLocaleDateString()}`, pageWidth - 100, 80);
 
         let currentY = 160;
 
         // Employee Information
         doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
-        const empInfoText = this.safeText(t.employeeInformation, language);
-        doc.text(empInfoText, 50, currentY, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(t.employeeInformation, leftMargin, currentY);
         currentY += 20;
 
         const empData = [
-          [this.safeText(t.employeeName, language), user.name || 'N/A'],
-          [this.safeText(t.employeeId, language), `#${user._id.toString().slice(-8).toUpperCase()}`],
-          [this.safeText(t.position, language), user.position || 'N/A'],
-          [this.safeText(t.department, language), this.safeText(t.general, language)],
-          [this.safeText(t.status, language), salary.isPaid ? this.safeText(t.paid, language) : this.safeText(t.pending, language)]
+          [t.employeeName, user.name || 'N/A'],
+          [t.employeeId, `#${user._id.toString().slice(-8).toUpperCase()}`],
+          [t.position, user.position || 'N/A'],
+          [t.department, t.general],
+          [t.status, salary.isPaid ? t.paid : t.pending]
         ];
 
         empData.forEach(([label, value]) => {
           doc.fontSize(10).fillColor('#000000').font('Helvetica-Bold');
-          if (isRTL) {
-            // RTL layout: value on left, label on right
-            doc.text(value, 50, currentY, { width: 200 });
-            doc.text(label, pageWidth - 200, currentY, { width: 190, align: 'right' });
-          } else {
-            // LTR layout: label on left, value on right
-            doc.text(label, 50, currentY, { width: 120 });
-            doc.font('Helvetica');
-            doc.text(value, 170, currentY);
-          }
+          doc.text(label, leftMargin, currentY, { width: 120 });
+          doc.font('Helvetica');
+          doc.text(value, leftMargin + 120, currentY);
           currentY += 15;
         });
 
@@ -373,122 +325,94 @@ export class PDFService {
 
         // Salary Breakdown Table
         doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
-        const breakdownText = this.safeText(t.salaryBreakdown, language);
-        doc.text(breakdownText, 50, currentY, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(t.salaryBreakdown, leftMargin, currentY);
         currentY += 25;
 
         // Table Header
-        doc.rect(50, currentY, pageWidth, 25).fill('#FF6600');
+        doc.rect(leftMargin, currentY, pageWidth, 25).fill('#FF6600');
         doc.fontSize(11).fillColor('#FFFFFF').font('Helvetica-Bold');
-        
-        if (isRTL) {
-          // RTL table headers
-          doc.text(this.safeText(t.type, language), 60, currentY + 8, { width: 100, align: 'right' });
-          doc.text(this.safeText(t.amount, language), 200, currentY + 8, { width: 100, align: 'right' });
-          doc.text(this.safeText(t.description, language), pageWidth - 150, currentY + 8, { width: 140, align: 'right' });
-        } else {
-          // LTR table headers
-          doc.text(this.safeText(t.description, language), 60, currentY + 8);
-          doc.text(this.safeText(t.amount, language), 250, currentY + 8);
-          doc.text(this.safeText(t.type, language), 400, currentY + 8);
-        }
+        doc.text(t.description, leftMargin + 10, currentY + 8);
+        doc.text(t.amount, leftMargin + 250, currentY + 8);
+        doc.text(t.type, leftMargin + 400, currentY + 8);
         currentY += 25;
 
         // Table Rows
         const salaryData = [
-          [this.safeText(t.baseSalary, language), (salary.baseSalary || 0).toFixed(2), this.safeText(t.earning, language)],
-          [this.safeText(t.overtimePay, language), (salary.overtime || 0).toFixed(2), this.safeText(t.earning, language)],
-          [this.safeText(t.bonuses, language), (salary.bonuses || 0).toFixed(2), this.safeText(t.earning, language)],
-          [this.safeText(t.deductions, language), (salary.deductions || 0).toFixed(2), this.safeText(t.deduction, language)]
+          [t.baseSalary, (salary.baseSalary || 0).toFixed(2), t.earning],
+          [t.overtimePay, (salary.overtime || 0).toFixed(2), t.earning],
+          [t.bonuses, (salary.bonuses || 0).toFixed(2), t.earning],
+          [t.deductions, (salary.deductions || 0).toFixed(2), t.deduction]
         ];
 
         salaryData.forEach(([desc, amount, type], index) => {
           const bgColor = index % 2 === 0 ? '#F8F9FA' : '#FFFFFF';
-          doc.rect(50, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
+          doc.rect(leftMargin, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
           doc.fontSize(10).fillColor('#000000').font('Helvetica');
-          
-          if (isRTL) {
-            // RTL table data
-            doc.text(type, 60, currentY + 6, { width: 100, align: 'right' });
-            doc.text(`${amount} DH`, 200, currentY + 6, { width: 100, align: 'right' });
-            doc.text(desc, pageWidth - 150, currentY + 6, { width: 140, align: 'right' });
-          } else {
-            // LTR table data
-            doc.text(desc, 60, currentY + 6);
-            doc.text(`${amount} DH`, 250, currentY + 6);
-            doc.text(type, 400, currentY + 6);
-          }
+          doc.text(desc, leftMargin + 10, currentY + 6);
+          doc.text(`${amount} DH`, leftMargin + 250, currentY + 6);
+          doc.text(type, leftMargin + 400, currentY + 6);
           currentY += 20;
         });
 
         // Total Section
         currentY += 10;
-        doc.rect(50, currentY, pageWidth, 30).fill('#FF6600');
+        doc.rect(leftMargin, currentY, pageWidth, 30).fill('#FF6600');
         doc.fontSize(14).fillColor('#FFFFFF').font('Helvetica-Bold');
-        
-        const netSalaryText = this.safeText(t.netSalary, language);
-        const totalAmount = `${(salary.totalSalary || 0).toFixed(2)} DH`;
-        
-        if (isRTL) {
-          doc.text(totalAmount, 200, currentY + 8, { width: 100, align: 'right' });
-          doc.text(netSalaryText, pageWidth - 200, currentY + 8, { width: 190, align: 'right' });
-        } else {
-          doc.text(netSalaryText, 60, currentY + 8);
-          doc.text(totalAmount, 250, currentY + 8);
-        }
+        doc.text(t.netSalary, leftMargin + 10, currentY + 8);
+        doc.text(`${(salary.totalSalary || 0).toFixed(2)} DH`, leftMargin + 250, currentY + 8);
         currentY += 50;
+
+        // Attendance Summary (if available)
+        if (salary.presentDays !== undefined) {
+          doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
+          doc.text(t.attendanceSummary, leftMargin, currentY);
+          currentY += 25;
+
+          doc.rect(leftMargin, currentY, pageWidth, 25).fill('#FF6600');
+          doc.fontSize(11).fillColor('#FFFFFF').font('Helvetica-Bold');
+          doc.text(t.metric, leftMargin + 10, currentY + 8);
+          doc.text(t.count, leftMargin + 200, currentY + 8);
+          doc.text(t.details, leftMargin + 300, currentY + 8);
+          currentY += 25;
+
+          const attData = [
+            [t.workingDays, salary.totalWorkingDays || 0, t.totalDays],
+            [t.presentDays, salary.presentDays || 0, t.daysAttended],
+            [t.absentDays, salary.absentDays || 0, t.daysMissed],
+            [t.hoursWorked, `${(salary.totalHoursWorked || 0).toFixed(1)}h`, t.totalHours]
+          ];
+
+          attData.forEach(([metric, count, details], index) => {
+            const bgColor = index % 2 === 0 ? '#F8F9FA' : '#FFFFFF';
+            doc.rect(leftMargin, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
+            doc.fontSize(10).fillColor('#000000').font('Helvetica');
+            doc.text(metric, leftMargin + 10, currentY + 6);
+            doc.text(count.toString(), leftMargin + 200, currentY + 6);
+            doc.text(details, leftMargin + 300, currentY + 6);
+            currentY += 20;
+          });
+          currentY += 20;
+        }
 
         // Signatures
         doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold');
-        const signaturesText = this.safeText(t.authorizedSignatures, language);
-        doc.text(signaturesText, 50, currentY, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(t.authorizedSignatures, leftMargin, currentY);
         currentY += 30;
 
         doc.fontSize(10).fillColor('#000000').font('Helvetica');
-        const hrText = this.safeText(t.hrDepartment, language);
-        const employeeText = this.safeText(t.employee, language);
-        const signatureDateText = this.safeText(t.signatureDate, language);
-        
-        if (isRTL) {
-          // RTL signatures
-          doc.text(employeeText, pageWidth - 150, currentY, { width: 140, align: 'right' });
-          doc.moveTo(pageWidth - 150, currentY + 30).lineTo(pageWidth - 10, currentY + 30).stroke('#000000');
-          doc.text(`${user.name}`, pageWidth - 150, currentY + 35, { width: 140, align: 'right' });
+        doc.text(t.hrDepartment, leftMargin, currentY);
+        doc.moveTo(leftMargin, currentY + 30).lineTo(leftMargin + 150, currentY + 30).stroke('#000000');
+        doc.text(t.signatureDate, leftMargin, currentY + 35);
 
-          doc.text(hrText, 50, currentY, { width: 150 });
-          doc.moveTo(50, currentY + 30).lineTo(200, currentY + 30).stroke('#000000');
-          doc.text(signatureDateText, 50, currentY + 35);
-        } else {
-          // LTR signatures
-          doc.text(hrText, 50, currentY);
-          doc.moveTo(50, currentY + 30).lineTo(200, currentY + 30).stroke('#000000');
-          doc.text(signatureDateText, 50, currentY + 35);
-
-          doc.text(employeeText, 300, currentY);
-          doc.moveTo(300, currentY + 30).lineTo(450, currentY + 30).stroke('#000000');
-          doc.text(`${user.name}`, 300, currentY + 35);
-        }
+        doc.text(t.employee, leftMargin + 300, currentY);
+        doc.moveTo(leftMargin + 300, currentY + 30).lineTo(leftMargin + 450, currentY + 30).stroke('#000000');
+        doc.text(`${user.name}`, leftMargin + 300, currentY + 35);
 
         // Footer
         currentY += 80;
         doc.fontSize(8).fillColor('#666666').font('Helvetica');
-        const footerText = this.safeText(t.computerGeneratedDocument, language);
-        const generatedText = `${this.safeText(t.generatedOn, language)} ${new Date().toLocaleString()}`;
-        
-        doc.text(footerText, 50, currentY, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
-        doc.text(generatedText, 50, currentY + 12, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(t.computerGeneratedDocument, leftMargin, currentY);
+        doc.text(`${t.generatedOn} ${new Date().toLocaleString()}`, leftMargin, currentY + 12);
 
         doc.end();
       } catch (error) {
@@ -497,7 +421,7 @@ export class PDFService {
     });
   }
 
-  // Create individual receipt PDF with improved Arabic support
+  // Create individual receipt PDF
   private static createReceiptPDF(receipt: any, user: any, language: Language = 'en'): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
@@ -516,113 +440,120 @@ export class PDFService {
         doc.on('end', () => resolve(Buffer.concat(buffers)));
 
         const pageWidth = doc.page.width - 100;
-        const isRTL = this.isRTL(language);
+        const leftMargin = 50;
         const t = pdfTranslations[language];
 
-        // Use default font
-        doc.font('Helvetica');
-
-        // Header - Company name always LTR
+        // Header
         doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
-        doc.text('MANTAEVERT', isRTL ? pageWidth - 200 : 50, 50);
-        
+        doc.text('MANTAEVERT', leftMargin, 50);
         doc.fontSize(12).fillColor('#000000').font('Helvetica');
-        const systemText = this.safeText(t.humanResourcesManagementSystem, language);
-        doc.text(systemText, 50, 90, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(t.humanResourcesManagementSystem, leftMargin, 90);
         
         // Document Title
         doc.fontSize(20).fillColor('#000000').font('Helvetica-Bold');
-        const titleText = this.safeText(t.paymentReceipt, language);
-        doc.text(titleText, 50, 120, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(t.paymentReceipt, leftMargin, 120);
         
-        // Document Info - Always on the right
+        // Document Info
         doc.fontSize(10).fillColor('#000000').font('Helvetica');
-        const infoX = pageWidth - 150;
-        doc.text(`${this.safeText(t.receiptNumber, language)} ${receipt._id.toString().slice(-8).toUpperCase()}`, infoX, 50, {
-          width: 150,
-          align: 'right'
-        });
-        doc.text(`${this.safeText(t.date, language)} ${new Date(receipt.date).toLocaleDateString()}`, infoX, 65, {
-          width: 150,
-          align: 'right'
-        });
-        doc.text(`${this.safeText(t.time, language)} ${new Date(receipt.date).toLocaleTimeString()}`, infoX, 80, {
-          width: 150,
-          align: 'right'
-        });
+        doc.text(`${t.receiptNumber} ${receipt._id.toString().slice(-8).toUpperCase()}`, pageWidth - 100, 50);
+        doc.text(`${t.date} ${new Date(receipt.date).toLocaleDateString()}`, pageWidth - 100, 65);
+        doc.text(`${t.time} ${new Date(receipt.date).toLocaleTimeString()}`, pageWidth - 100, 80);
 
         let currentY = 160;
 
         // Recipient Information
         doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
-        const recipientInfoText = this.safeText(t.recipientInformation, language);
-        doc.text(recipientInfoText, 50, currentY, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(t.recipientInformation, leftMargin, currentY);
         currentY += 20;
 
         const recipientData = [
-          [this.safeText(t.recipientName, language), user.name || 'N/A'],
-          [this.safeText(t.employeeId, language), `#${user._id.toString().slice(-8).toUpperCase()}`],
-          [this.safeText(t.email, language), user.email || 'N/A'],
-          [this.safeText(t.receiptType, language), receipt.type.charAt(0).toUpperCase() + receipt.type.slice(1)]
+          [t.recipientName, user.name || 'N/A'],
+          [t.employeeId, `#${user._id.toString().slice(-8).toUpperCase()}`],
+          [t.email, user.email || 'N/A'],
+          [t.receiptType, receipt.type.charAt(0).toUpperCase() + receipt.type.slice(1)]
         ];
 
         recipientData.forEach(([label, value]) => {
           doc.fontSize(10).fillColor('#000000').font('Helvetica-Bold');
-          if (isRTL) {
-            // RTL layout
-            doc.text(value, 50, currentY, { width: 200 });
-            doc.text(label, pageWidth - 200, currentY, { width: 190, align: 'right' });
-          } else {
-            // LTR layout
-            doc.text(label, 50, currentY, { width: 120 });
-            doc.font('Helvetica');
-            doc.text(value, 170, currentY);
-          }
+          doc.text(label, leftMargin, currentY, { width: 120 });
+          doc.font('Helvetica');
+          doc.text(value, leftMargin + 120, currentY);
           currentY += 15;
         });
 
         currentY += 30;
 
-        // Amount Section - Always on the right side for visual impact
+        // Payment Details
+        doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
+        doc.text(t.paymentDetails, leftMargin, currentY);
+        currentY += 25;
+
+        doc.rect(leftMargin, currentY, pageWidth, 25).fill('#FF6600');
+        doc.fontSize(11).fillColor('#FFFFFF').font('Helvetica-Bold');
+        doc.text(t.description, leftMargin + 10, currentY + 8);
+        doc.text(t.information, leftMargin + 250, currentY + 8);
+        currentY += 25;
+
+        const paymentData = [
+          [t.paymentMethod, t.companyTransfer],
+          [t.transactionId, receipt._id.toString().slice(-12).toUpperCase()],
+          [t.processingDate, new Date(receipt.date).toLocaleDateString()],
+          [t.status, t.completed]
+        ];
+
+        paymentData.forEach(([desc, info], index) => {
+          const bgColor = index % 2 === 0 ? '#F8F9FA' : '#FFFFFF';
+          doc.rect(leftMargin, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
+          doc.fontSize(10).fillColor('#000000').font('Helvetica');
+          doc.text(desc, leftMargin + 10, currentY + 6);
+          doc.text(info, leftMargin + 250, currentY + 6);
+          currentY += 20;
+        });
+
+        currentY += 15;
+
+        // Amount Section (right side)
         const amountBoxWidth = 200;
-        const amountBoxX = pageWidth - amountBoxWidth + 50;
+        const amountBoxX = leftMargin + pageWidth - amountBoxWidth;
         doc.rect(amountBoxX, currentY, amountBoxWidth, 35).fill('#FF6600');
         doc.fontSize(12).fillColor('#FFFFFF').font('Helvetica-Bold');
-        const totalAmountText = this.safeText(t.totalAmount, language);
-        doc.text(totalAmountText, amountBoxX + 15, currentY + 6, {
-          width: amountBoxWidth - 30,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(t.totalAmount, amountBoxX + 15, currentY + 6);
         doc.fontSize(18);
-        doc.text(`${(receipt.amount || 0).toFixed(2)} DH`, amountBoxX + 15, currentY + 18, {
-          width: amountBoxWidth - 30,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(`${(receipt.amount || 0).toFixed(2)} DH`, amountBoxX + 15, currentY + 18);
         currentY += 50;
+
+        // Description Section
+        doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
+        doc.text(t.description, leftMargin, currentY);
+        currentY += 20;
+
+        doc.rect(leftMargin, currentY, pageWidth, 40).fill('#F8F9FA').stroke('#E0E0E0');
+        doc.fontSize(10).fillColor('#000000').font('Helvetica');
+        doc.text(receipt.description || t.noDescriptionProvided, leftMargin + 10, currentY + 10, {
+          width: pageWidth - 20,
+          align: 'left'
+        });
+        currentY += 60;
+
+        // Signatures
+        doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold');
+        doc.text(t.authorizedSignatures, leftMargin, currentY);
+        currentY += 30;
+
+        doc.fontSize(10).fillColor('#000000').font('Helvetica');
+        doc.text(t.hrDepartment, leftMargin, currentY);
+        doc.moveTo(leftMargin, currentY + 30).lineTo(leftMargin + 150, currentY + 30).stroke('#000000');
+        doc.text(t.signatureDate, leftMargin, currentY + 35);
+
+        doc.text(t.recipient, leftMargin + 300, currentY);
+        doc.moveTo(leftMargin + 300, currentY + 30).lineTo(leftMargin + 450, currentY + 30).stroke('#000000');
+        doc.text(`${user.name}`, leftMargin + 300, currentY + 35);
 
         // Footer
         currentY += 80;
         doc.fontSize(8).fillColor('#666666').font('Helvetica');
-        const footerText = this.safeText(t.computerGeneratedReceipt, language);
-        const generatedText = `${this.safeText(t.generatedOn, language)} ${new Date().toLocaleString()}`;
-        
-        doc.text(footerText, 50, currentY, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
-        doc.text(generatedText, 50, currentY + 12, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(t.computerGeneratedReceipt, leftMargin, currentY);
+        doc.text(`${t.generatedOn} ${new Date().toLocaleString()}`, leftMargin, currentY + 12);
 
         doc.end();
       } catch (error) {
@@ -631,7 +562,7 @@ export class PDFService {
     });
   }
 
-  // Create all salaries PDF with improved Arabic support
+  // Create all salaries PDF
   private static createAllSalariesPDF(salaryRecords: any[], language: Language = 'en'): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
@@ -640,30 +571,15 @@ export class PDFService {
         doc.on('data', buffers.push.bind(buffers));
         doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-        const pageWidth = doc.page.width - 100;
-        const isRTL = this.isRTL(language);
         const t = pdfTranslations[language];
-
-        // Use default font
-        doc.font('Helvetica');
 
         // Header
         doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
-        doc.text('MANTAEVERT', isRTL ? pageWidth - 200 : 50, 50);
-        
+        doc.text('MANTAEVERT', 50, 50);
         doc.fontSize(18).fillColor('#000000').font('Helvetica-Bold');
-        const reportText = this.safeText(t.allSalariesReport, language);
-        doc.text(reportText, 50, 100, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
-        
+        doc.text(t.allSalariesReport, 50, 100);
         doc.fontSize(12).fillColor('#000000').font('Helvetica');
-        const generatedText = `${this.safeText(t.generatedOn, language)} ${new Date().toLocaleDateString()}`;
-        doc.text(generatedText, 50, 125, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(`${t.generatedOn} ${new Date().toLocaleDateString()}`, 50, 125);
 
         let yPos = 160;
         salaryRecords.forEach((salary, index) => {
@@ -673,21 +589,10 @@ export class PDFService {
           }
           const user = salary.userId as any;
           doc.fontSize(12).fillColor('#FF6600').font('Helvetica-Bold');
-          
-          const entryText = `${index + 1}. ${user.name}`;
-          const detailText = `${salary.month} ${salary.year} - ${this.safeText(t.total, language)} ${salary.totalSalary?.toFixed(2) || '0.00'} DH`;
-          
-          if (isRTL) {
-            doc.text(entryText, 50, yPos, { width: pageWidth, align: 'right' });
-            yPos += 15;
-            doc.fontSize(10).fillColor('#000000').font('Helvetica');
-            doc.text(detailText, 50, yPos, { width: pageWidth, align: 'right' });
-          } else {
-            doc.text(entryText, 50, yPos);
-            yPos += 15;
-            doc.fontSize(10).fillColor('#000000').font('Helvetica');
-            doc.text(detailText, 70, yPos);
-          }
+          doc.text(`${index + 1}. ${user.name}`, 50, yPos);
+          yPos += 15;
+          doc.fontSize(10).fillColor('#000000').font('Helvetica');
+          doc.text(`${salary.month} ${salary.year} - ${t.total} ${salary.totalSalary?.toFixed(2) || '0.00'} DH`, 70, yPos);
           yPos += 25;
         });
 
@@ -698,7 +603,7 @@ export class PDFService {
     });
   }
 
-  // Create all receipts PDF with improved Arabic support
+  // Create all receipts PDF
   private static createAllReceiptsPDF(receipts: any[], language: Language = 'en'): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
@@ -707,30 +612,15 @@ export class PDFService {
         doc.on('data', buffers.push.bind(buffers));
         doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-        const pageWidth = doc.page.width - 100;
-        const isRTL = this.isRTL(language);
         const t = pdfTranslations[language];
-
-        // Use default font
-        doc.font('Helvetica');
 
         // Header
         doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
-        doc.text('MANTAEVERT', isRTL ? pageWidth - 200 : 50, 50);
-        
+        doc.text('MANTAEVERT', 50, 50);
         doc.fontSize(18).fillColor('#000000').font('Helvetica-Bold');
-        const reportText = this.safeText(t.allReceiptsReport, language);
-        doc.text(reportText, 50, 100, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
-        
+        doc.text(t.allReceiptsReport, 50, 100);
         doc.fontSize(12).fillColor('#000000').font('Helvetica');
-        const generatedText = `${this.safeText(t.generatedOn, language)} ${new Date().toLocaleDateString()}`;
-        doc.text(generatedText, 50, 125, {
-          width: pageWidth,
-          align: isRTL ? 'right' : 'left'
-        });
+        doc.text(`${t.generatedOn} ${new Date().toLocaleDateString()}`, 50, 125);
 
         let yPos = 160;
         receipts.forEach((receipt, index) => {
@@ -740,21 +630,10 @@ export class PDFService {
           }
           const user = receipt.userId as any;
           doc.fontSize(12).fillColor('#FF6600').font('Helvetica-Bold');
-          
-          const entryText = `${index + 1}. ${user.name}`;
-          const detailText = `${receipt.type} - ${receipt.amount?.toFixed(2) || '0.00'} DH - ${new Date(receipt.date).toLocaleDateString()}`;
-          
-          if (isRTL) {
-            doc.text(entryText, 50, yPos, { width: pageWidth, align: 'right' });
-            yPos += 15;
-            doc.fontSize(10).fillColor('#000000').font('Helvetica');
-            doc.text(detailText, 50, yPos, { width: pageWidth, align: 'right' });
-          } else {
-            doc.text(entryText, 50, yPos);
-            yPos += 15;
-            doc.fontSize(10).fillColor('#000000').font('Helvetica');
-            doc.text(detailText, 70, yPos);
-          }
+          doc.text(`${index + 1}. ${user.name}`, 50, yPos);
+          yPos += 15;
+          doc.fontSize(10).fillColor('#000000').font('Helvetica');
+          doc.text(`${receipt.type} - ${receipt.amount?.toFixed(2) || '0.00'} DH - ${new Date(receipt.date).toLocaleDateString()}`, 70, yPos);
           yPos += 25;
         });
 
