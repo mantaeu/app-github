@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,59 +15,31 @@ import { useAuth } from '../contexts/AuthContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { ThemedButton } from '../components/ThemedButton';
 import { SearchBar } from '../components/SearchBar';
-import PDFLanguageModal from '../components/PDFLanguageModal';
 import { apiService } from '../services/api';
 import { SalaryRecord } from '../types';
 import { getTranslatedMonth, getCurrentMonthNumber, getCurrentMonthName } from '../utils/dateUtils';
-import { useDebounce } from '../hooks/useDebounce';
 
 export const SalaryScreen: React.FC = () => {
   const [salaryRecords, setSalaryRecords] = useState<SalaryRecord[]>([]);
+  const [filteredRecords, setFilteredRecords] = useState<SalaryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const [selectedSalaryId, setSelectedSalaryId] = useState<string | null>(null);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
   const { user } = useAuth();
 
-  // Debounce search query to prevent too many re-renders
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
   useEffect(() => {
     loadSalaryRecords();
   }, []);
 
-  // Memoized filtered records using debounced search query
-  const filteredRecords = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) {
-      return salaryRecords;
-    }
+  useEffect(() => {
+    filterRecords();
+  }, [salaryRecords, searchQuery]);
 
-    const query = debouncedSearchQuery.toLowerCase().trim();
-    return salaryRecords.filter(record => {
-      // Safe string operations with fallback to empty string
-      const userName = (record?.userId?.name || '').toLowerCase();
-      const userEmail = (record?.userId?.email || '').toLowerCase();
-      const month = (record?.month || '').toLowerCase();
-      const year = (record?.year || '').toString();
-      const status = record?.isPaid ? 'paid' : 'pending';
-      const totalSalary = (record?.totalSalary || 0).toString();
-
-      return userName.includes(query) ||
-             userEmail.includes(query) ||
-             month.includes(query) ||
-             year.includes(query) ||
-             status.includes(query) ||
-             totalSalary.includes(query);
-    });
-  }, [salaryRecords, debouncedSearchQuery]);
-
-  const loadSalaryRecords = useCallback(async () => {
+  const loadSalaryRecords = async () => {
     try {
       const response = await apiService.getSalaryRecords(
         user?.role === 'worker' ? user._id : undefined
@@ -90,34 +62,55 @@ export const SalaryScreen: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.role, user?._id, t]);
+  };
 
-  const onRefresh = useCallback(() => {
+  const filterRecords = () => {
+    if (!searchQuery.trim()) {
+      setFilteredRecords(salaryRecords);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = salaryRecords.filter(record => {
+      // Safe string operations with fallback to empty string
+      const userName = (record?.userId?.name || '').toLowerCase();
+      const userEmail = (record?.userId?.email || '').toLowerCase();
+      const month = (record?.month || '').toLowerCase();
+      const year = (record?.year || '').toString();
+      const status = record?.isPaid ? 'paid' : 'pending';
+      const totalSalary = (record?.totalSalary || 0).toString();
+
+      return userName.includes(query) ||
+             userEmail.includes(query) ||
+             month.includes(query) ||
+             year.includes(query) ||
+             status.includes(query) ||
+             totalSalary.includes(query);
+    });
+    setFilteredRecords(filtered);
+  };
+
+  const onRefresh = () => {
     setRefreshing(true);
     loadSalaryRecords();
-  }, [loadSalaryRecords]);
+  };
 
-  const handleSearchChange = useCallback((text: string) => {
-    setSearchQuery(text);
-  }, []);
-
-  const handleExportPDF = useCallback(async (language: string) => {
+  const handleExportPDF = async () => {
     if (user?.role !== 'admin') return;
 
     try {
       setExporting(true);
-      await apiService.exportAllSalariesPDF(language);
+      await apiService.exportAllSalariesPDF('en');
       Alert.alert(t('success'), t('salariesPDFExported'));
     } catch (error) {
       console.error('Error exporting salaries PDF:', error);
       Alert.alert(t('error'), t('failedToExportSalariesPDF'));
     } finally {
       setExporting(false);
-      setShowLanguageModal(false);
     }
-  }, [user?.role, t]);
+  };
 
-  const handleGenerateMonthly = useCallback(() => {
+  const handleGenerateMonthly = () => {
     const currentDate = new Date();
     const currentMonthNumber = getCurrentMonthNumber();
     const currentMonthName = getCurrentMonthName();
@@ -151,9 +144,9 @@ export const SalaryScreen: React.FC = () => {
         },
       ]
     );
-  }, [t, loadSalaryRecords]);
+  };
 
-  const handleMonthlyCheckout = useCallback((record: SalaryRecord) => {
+  const handleMonthlyCheckout = (record: SalaryRecord) => {
     const userId = user?.role === 'admin' ? record.userId._id : user?._id;
     if (!userId) return;
 
@@ -204,70 +197,56 @@ export const SalaryScreen: React.FC = () => {
         },
       ]
     );
-  }, [user?.role, user?._id, t, loadSalaryRecords]);
+  };
 
-  const handleMarkAsPaid = useCallback((record: SalaryRecord) => {
-    if (user?.role !== 'admin') return;
-
-    const monthNumber = new Date(`${record.month} 1, ${record.year}`).getMonth() + 1;
-    const workerName = record.userId?.name || 'Unknown Worker';
+  const handleMarkAsPaid = async (record: SalaryRecord) => {
+    if (!record._id) return;
 
     Alert.alert(
-      t('markAsPaid'),
-      `Mark ${workerName}'s salary for ${t(getTranslatedMonth(monthNumber))} ${record.year} as paid?`,
+      'Mark as Paid',
+      `Mark salary as paid for ${record.userId?.name || 'Unknown Worker'} - ${t(getTranslatedMonth(new Date(`${record.month} 1, ${record.year}`).getMonth() + 1))} ${record.year}?`,
       [
         { text: t('cancel'), style: 'cancel' },
         {
-          text: t('markAsPaid'),
+          text: 'Mark as Paid',
           style: 'default',
           onPress: async () => {
             try {
               const response = await apiService.markSalaryAsPaid(record._id);
               if (response.success) {
-                Alert.alert(t('success'), `${workerName}'s salary has been marked as paid`);
+                Alert.alert(t('success'), 'Salary marked as paid successfully');
                 loadSalaryRecords();
               } else {
-                Alert.alert(t('error'), response.error || t('failedToMarkAsPaid'));
+                Alert.alert(t('error'), response.error || 'Failed to mark salary as paid');
               }
             } catch (error) {
               console.error('Error marking salary as paid:', error);
-              Alert.alert(t('error'), t('failedToMarkAsPaid'));
+              Alert.alert(t('error'), 'Failed to mark salary as paid');
             }
           },
         },
       ]
     );
-  }, [user?.role, t, loadSalaryRecords]);
+  };
 
-  const handleGenerateSalarySlip = useCallback((record: SalaryRecord) => {
-    setSelectedSalaryId(record._id);
-    setShowLanguageModal(true);
-  }, []);
-
-  const handleDownloadSalarySlipWithLanguage = useCallback(async (language: string) => {
-    if (!selectedSalaryId) return;
+  const handleGenerateSalarySlip = async (record: SalaryRecord) => {
+    if (!record._id) return;
 
     try {
-      setDownloadingId(selectedSalaryId);
-      await apiService.downloadIndividualSalarySlipPDF(selectedSalaryId, language);
-      Alert.alert(t('success'), t('salarySlipDownloaded'));
+      await apiService.downloadIndividualSalarySlipPDF(record._id, 'en');
+      Alert.alert(t('success'), 'Salary slip downloaded successfully');
     } catch (error) {
-      console.error('Error downloading salary slip:', error);
-      Alert.alert(t('error'), t('failedToDownloadSalarySlip'));
-    } finally {
-      setDownloadingId(null);
-      setSelectedSalaryId(null);
-      setShowLanguageModal(false);
+      console.error('Error downloading salary slip PDF:', error);
+      Alert.alert(t('error'), 'Failed to download salary slip');
     }
-  }, [selectedSalaryId, t]);
+  };
 
-  const formatCurrency = useCallback((amount: number) => {
+  const formatCurrency = (amount: number) => {
     return `${(amount || 0).toLocaleString()} DH`;
-  }, []);
+  };
 
-  const SalaryCard = React.memo<{ record: SalaryRecord }>(({ record }) => {
+  const SalaryCard: React.FC<{ record: SalaryRecord }> = ({ record }) => {
     const monthNumber = new Date(`${record?.month || 'January'} 1, ${record?.year || new Date().getFullYear()}`).getMonth() + 1;
-    const isDownloading = downloadingId === record._id;
     
     return (
       <ThemedCard style={styles.salaryCard}>
@@ -386,17 +365,16 @@ export const SalaryScreen: React.FC = () => {
           )}
 
           <ThemedButton
-            title={isDownloading ? t('downloading') : t('generateSalarySlip')}
+            title={t('generateSalarySlip')}
             onPress={() => handleGenerateSalarySlip(record)}
             size="small"
             variant="outline"
             style={styles.actionButton}
-            disabled={isDownloading}
           />
         </View>
       </ThemedCard>
     );
-  });
+  };
 
   // Calculate pending salaries total
   const pendingTotal = filteredRecords
@@ -414,10 +392,7 @@ export const SalaryScreen: React.FC = () => {
           <View style={styles.headerButtons}>
             <ThemedButton
               title={t('exportPDF')}
-              onPress={() => {
-                setSelectedSalaryId(null);
-                setShowLanguageModal(true);
-              }}
+              onPress={handleExportPDF}
               size="small"
               variant="outline"
               style={styles.exportButton}
@@ -437,7 +412,7 @@ export const SalaryScreen: React.FC = () => {
       <View style={styles.searchContainer}>
         <SearchBar
           value={searchQuery}
-          onChangeText={handleSearchChange}
+          onChangeText={setSearchQuery}
           placeholder={`${t('search')} ${t('salary').toLowerCase()}...`}
         />
       </View>
@@ -463,8 +438,6 @@ export const SalaryScreen: React.FC = () => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="none"
       >
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -497,17 +470,6 @@ export const SalaryScreen: React.FC = () => {
           </>
         )}
       </ScrollView>
-
-      <PDFLanguageModal
-        visible={showLanguageModal}
-        onClose={() => {
-          setShowLanguageModal(false);
-          setSelectedSalaryId(null);
-        }}
-        onGenerate={selectedSalaryId ? handleDownloadSalarySlipWithLanguage : handleExportPDF}
-        title={selectedSalaryId ? "Download Salary Slip" : "Export All Salaries"}
-        loading={exporting || !!downloadingId}
-      />
     </View>
   );
 };
