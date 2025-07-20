@@ -14,6 +14,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { ThemedButton } from '../components/ThemedButton';
+import PDFLanguageModal from '../components/PDFLanguageModal';
 import { apiService } from '../services/api';
 import { SalaryRecord } from '../types';
 
@@ -23,6 +24,8 @@ export const SalaryScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [selectedSalaryId, setSelectedSalaryId] = useState<string | null>(null);
 
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
@@ -68,31 +71,41 @@ export const SalaryScreen: React.FC = () => {
     loadSalaryRecords();
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = async (language: string) => {
     if (user?.role !== 'admin') return;
 
     try {
       setExporting(true);
-      await apiService.exportAllSalariesPDF();
+      await apiService.exportAllSalariesPDF(language);
       Alert.alert(t('success'), t('salariesPDFExported'));
     } catch (error) {
       console.error('Error exporting salaries PDF:', error);
       Alert.alert(t('error'), t('failedToExportSalariesPDF'));
     } finally {
       setExporting(false);
+      setShowLanguageModal(false);
     }
   };
 
   const handleGenerateSalarySlip = async (record: SalaryRecord) => {
+    setSelectedSalaryId(record._id);
+    setShowLanguageModal(true);
+  };
+
+  const handleDownloadSalarySlip = async (language: string) => {
+    if (!selectedSalaryId) return;
+
     try {
-      setDownloadingId(record._id);
-      await apiService.downloadIndividualSalarySlipPDF(record._id);
+      setDownloadingId(selectedSalaryId);
+      await apiService.downloadIndividualSalarySlipPDF(selectedSalaryId, language);
       Alert.alert(t('success'), t('salarySlipPDFDownloaded'));
     } catch (error) {
       console.error('Error downloading salary slip:', error);
       Alert.alert(t('error'), t('failedToDownloadSalarySlip'));
     } finally {
       setDownloadingId(null);
+      setSelectedSalaryId(null);
+      setShowLanguageModal(false);
     }
   };
 
@@ -341,7 +354,10 @@ export const SalaryScreen: React.FC = () => {
           <View style={styles.headerButtons}>
             <ThemedButton
               title={t('exportPDF')}
-              onPress={handleExportPDF}
+              onPress={() => {
+                setSelectedSalaryId(null);
+                setShowLanguageModal(true);
+              }}
               size="small"
               style={styles.exportButton}
               variant="outline"
@@ -397,6 +413,17 @@ export const SalaryScreen: React.FC = () => {
           ))
         )}
       </ScrollView>
+
+      <PDFLanguageModal
+        visible={showLanguageModal}
+        onClose={() => {
+          setShowLanguageModal(false);
+          setSelectedSalaryId(null);
+        }}
+        onGenerate={selectedSalaryId ? handleDownloadSalarySlip : handleExportPDF}
+        title={selectedSalaryId ? "Download Salary Slip" : "Export All Salaries"}
+        loading={exporting || !!downloadingId}
+      />
     </View>
   );
 };

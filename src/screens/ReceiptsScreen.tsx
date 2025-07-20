@@ -16,6 +16,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { ThemedButton } from '../components/ThemedButton';
+import PDFLanguageModal from '../components/PDFLanguageModal';
 import { apiService } from '../services/api';
 import { Receipt, User } from '../types';
 
@@ -27,6 +28,8 @@ export const ReceiptsScreen: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     userId: '',
     type: 'payment',
@@ -90,31 +93,41 @@ export const ReceiptsScreen: React.FC = () => {
     loadReceipts();
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = async (language: string) => {
     if (user?.role !== 'admin') return;
 
     try {
       setExporting(true);
-      await apiService.exportAllReceiptsPDF();
+      await apiService.exportAllReceiptsPDF(language);
       Alert.alert(t('success'), t('receiptsPDFExported'));
     } catch (error) {
       console.error('Error exporting receipts PDF:', error);
       Alert.alert(t('error'), t('failedToExportReceiptsPDF'));
     } finally {
       setExporting(false);
+      setShowLanguageModal(false);
     }
   };
 
   const handleDownloadReceipt = async (receipt: Receipt) => {
+    setSelectedReceiptId(receipt._id);
+    setShowLanguageModal(true);
+  };
+
+  const handleDownloadReceiptWithLanguage = async (language: string) => {
+    if (!selectedReceiptId) return;
+
     try {
-      setDownloadingId(receipt._id);
-      await apiService.downloadIndividualReceiptPDF(receipt._id);
+      setDownloadingId(selectedReceiptId);
+      await apiService.downloadIndividualReceiptPDF(selectedReceiptId, language);
       Alert.alert(t('success'), t('receiptPDFDownloaded'));
     } catch (error) {
       console.error('Error downloading receipt PDF:', error);
       Alert.alert(t('error'), t('failedToDownloadReceiptPDF'));
     } finally {
       setDownloadingId(null);
+      setSelectedReceiptId(null);
+      setShowLanguageModal(false);
     }
   };
 
@@ -366,7 +379,10 @@ export const ReceiptsScreen: React.FC = () => {
           <View style={styles.headerButtons}>
             <ThemedButton
               title={t('exportPDF')}
-              onPress={handleExportPDF}
+              onPress={() => {
+                setSelectedReceiptId(null);
+                setShowLanguageModal(true);
+              }}
               size="small"
               style={styles.exportButton}
               variant="outline"
@@ -453,6 +469,17 @@ export const ReceiptsScreen: React.FC = () => {
       </ScrollView>
 
       <CreateReceiptModal />
+      
+      <PDFLanguageModal
+        visible={showLanguageModal}
+        onClose={() => {
+          setShowLanguageModal(false);
+          setSelectedReceiptId(null);
+        }}
+        onGenerate={selectedReceiptId ? handleDownloadReceiptWithLanguage : handleExportPDF}
+        title={selectedReceiptId ? "Download Receipt" : "Export All Receipts"}
+        loading={exporting || !!downloadingId}
+      />
     </View>
   );
 };

@@ -248,8 +248,8 @@ class ApiService {
   }
 
   // Individual PDF download methods (for download buttons in each salary/receipt card)
-  async downloadIndividualSalarySlipPDF(salaryId: string): Promise<void> {
-    const url = `${API_BASE_URL}/pdf/salary-slip/${salaryId}`;
+  async downloadIndividualSalarySlipPDF(salaryId: string, language: string = 'en'): Promise<void> {
+    const url = `${API_BASE_URL}/pdf/salary-slip/${salaryId}?lang=${language}`;
     
     const headers: Record<string, string> = {};
     if (this.authToken) {
@@ -263,12 +263,12 @@ class ApiService {
     }
     
     const blob = await response.blob();
-    const filename = `salary-slip-${salaryId}.pdf`;
+    const filename = `salary-slip-${salaryId}-${language}.pdf`;
     await this.downloadPDF(blob, filename);
   }
 
-  async downloadIndividualReceiptPDF(receiptId: string): Promise<void> {
-    const url = `${API_BASE_URL}/pdf/receipt/${receiptId}`;
+  async downloadIndividualReceiptPDF(receiptId: string, language: string = 'en'): Promise<void> {
+    const url = `${API_BASE_URL}/pdf/receipt/${receiptId}?lang=${language}`;
     
     const headers: Record<string, string> = {};
     if (this.authToken) {
@@ -282,13 +282,13 @@ class ApiService {
     }
     
     const blob = await response.blob();
-    const filename = `receipt-${receiptId}.pdf`;
+    const filename = `receipt-${receiptId}-${language}.pdf`;
     await this.downloadPDF(blob, filename);
   }
 
   // Export Methods for Salary and Receipts screens (admin bulk export)
-  async exportAllSalariesPDF(): Promise<void> {
-    const url = `${API_BASE_URL}/pdf/all-salaries`;
+  async exportAllSalariesPDF(language: string = 'en'): Promise<void> {
+    const url = `${API_BASE_URL}/pdf/all-salaries?lang=${language}`;
     
     const headers: Record<string, string> = {};
     if (this.authToken) {
@@ -302,12 +302,12 @@ class ApiService {
     }
     
     const blob = await response.blob();
-    const filename = `all-salaries-${new Date().toISOString().split('T')[0]}.pdf`;
+    const filename = `all-salaries-${new Date().toISOString().split('T')[0]}-${language}.pdf`;
     await this.downloadPDF(blob, filename);
   }
 
-  async exportAllReceiptsPDF(): Promise<void> {
-    const url = `${API_BASE_URL}/pdf/all-receipts`;
+  async exportAllReceiptsPDF(language: string = 'en'): Promise<void> {
+    const url = `${API_BASE_URL}/pdf/all-receipts?lang=${language}`;
     
     const headers: Record<string, string> = {};
     if (this.authToken) {
@@ -321,7 +321,7 @@ class ApiService {
     }
     
     const blob = await response.blob();
-    const filename = `all-receipts-${new Date().toISOString().split('T')[0]}.pdf`;
+    const filename = `all-receipts-${new Date().toISOString().split('T')[0]}-${language}.pdf`;
     await this.downloadPDF(blob, filename);
   }
 }
