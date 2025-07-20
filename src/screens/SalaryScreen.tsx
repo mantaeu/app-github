@@ -14,18 +14,15 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { ThemedButton } from '../components/ThemedButton';
-import PDFLanguageModal from '../components/PDFLanguageModal';
 import { apiService } from '../services/api';
 import { SalaryRecord } from '../types';
+import { getTranslatedMonth, getCurrentMonthNumber, getCurrentMonthName } from '../utils/dateUtils';
 
 export const SalaryScreen: React.FC = () => {
   const [salaryRecords, setSalaryRecords] = useState<SalaryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const [selectedSalaryId, setSelectedSalaryId] = useState<string | null>(null);
 
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
@@ -37,28 +34,22 @@ export const SalaryScreen: React.FC = () => {
 
   const loadSalaryRecords = async () => {
     try {
-      console.log('🔍 Loading salary records...');
       const response = await apiService.getSalaryRecords(
         user?.role === 'worker' ? user._id : undefined
       );
-      console.log('🔍 Salary API response:', response);
-      
       if (response.success && response.data) {
-        // Handle nested response structure
         const actualData = response.data.data || response.data;
-        console.log('🔍 Actual salary data:', actualData);
-        
         if (Array.isArray(actualData)) {
           setSalaryRecords(actualData);
         } else {
-          setSalaryRecords([]); // Set empty array if not an array
+          setSalaryRecords([]);
         }
       } else {
-        setSalaryRecords([]); // Set empty array if no data
+        setSalaryRecords([]);
       }
     } catch (error) {
       console.error('Error loading salary records:', error);
-      setSalaryRecords([]); // Set empty array on error
+      setSalaryRecords([]);
       Alert.alert(t('error'), t('failedToLoadSalaryRecords'));
     } finally {
       setLoading(false);
@@ -71,88 +62,50 @@ export const SalaryScreen: React.FC = () => {
     loadSalaryRecords();
   };
 
-  const handleExportPDF = async (language: string) => {
+  const handleExportPDF = async () => {
     if (user?.role !== 'admin') return;
 
     try {
       setExporting(true);
-      await apiService.exportAllSalariesPDF(language);
+      await apiService.exportAllSalariesPDF('en');
       Alert.alert(t('success'), t('salariesPDFExported'));
     } catch (error) {
       console.error('Error exporting salaries PDF:', error);
       Alert.alert(t('error'), t('failedToExportSalariesPDF'));
     } finally {
       setExporting(false);
-      setShowLanguageModal(false);
     }
   };
 
-  const handleGenerateSalarySlip = async (record: SalaryRecord) => {
-    setSelectedSalaryId(record._id);
-    setShowLanguageModal(true);
-  };
-
-  const handleDownloadSalarySlip = async (language: string) => {
-    if (!selectedSalaryId) return;
-
-    try {
-      setDownloadingId(selectedSalaryId);
-      await apiService.downloadIndividualSalarySlipPDF(selectedSalaryId, language);
-      Alert.alert(t('success'), t('salarySlipPDFDownloaded'));
-    } catch (error) {
-      console.error('Error downloading salary slip:', error);
-      Alert.alert(t('error'), t('failedToDownloadSalarySlip'));
-    } finally {
-      setDownloadingId(null);
-      setSelectedSalaryId(null);
-      setShowLanguageModal(false);
-    }
-  };
-
-  const handleMarkAsPaid = async (recordId: string) => {
-    if (user?.role !== 'admin') return;
-
-    try {
-      const response = await apiService.markSalaryAsPaid(recordId);
-
-      if (response.success) {
-        Alert.alert(t('success'), t('salaryMarkedAsPaid'));
-        loadSalaryRecords();
-      } else {
-        Alert.alert(t('error'), response.error || t('failedToUpdateSalaryStatus'));
-      }
-    } catch (error) {
-      console.error('Error marking salary as paid:', error);
-      Alert.alert(t('error'), t('failedToUpdateSalaryStatus'));
-    }
-  };
-
-  const handleGenerateMonthly = async () => {
-    if (user?.role !== 'admin') return;
-
+  const handleGenerateMonthly = () => {
     const currentDate = new Date();
-    const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
+    const currentMonthNumber = getCurrentMonthNumber();
+    const currentMonthName = getCurrentMonthName();
     const currentYear = currentDate.getFullYear();
 
     Alert.alert(
-      'Generate Daily Salaries',
-      `Generate daily salary records for ${currentMonth} ${currentYear}?`,
+      t('generateDailySalaries'),
+      t('generateDailySalaryRecords', { 
+        month: t(getTranslatedMonth(currentMonthNumber)), 
+        year: currentYear.toString() 
+      }),
       [
         { text: t('cancel'), style: 'cancel' },
         {
           text: t('generate'),
+          style: 'default',
           onPress: async () => {
             try {
-              const response = await apiService.generateMonthlySalaries(currentMonth, currentYear);
+              const response = await apiService.generateMonthlySalaries(currentMonthName, currentYear);
               if (response.success) {
-                Alert.alert(t('success'), 'Daily salary records generated successfully');
+                Alert.alert(t('success'), t('dailySalaryRecordsGenerated'));
                 loadSalaryRecords();
               } else {
-                Alert.alert(t('error'), response.error || 'Failed to generate daily salary records');
+                Alert.alert(t('error'), response.error || t('failedToGenerateDailySalaryRecords'));
               }
             } catch (error) {
               console.error('Error generating daily salaries:', error);
-              Alert.alert(t('error'), 'Failed to generate daily salary records');
+              Alert.alert(t('error'), t('failedToGenerateDailySalaryRecords'));
             }
           },
         },
@@ -160,34 +113,40 @@ export const SalaryScreen: React.FC = () => {
     );
   };
 
-  const handleMonthlyCheckout = async (record: SalaryRecord) => {
-    const userId = user?.role === 'admin' ? record.userId : user?._id;
+  const handleMonthlyCheckout = (record: SalaryRecord) => {
+    const userId = user?.role === 'admin' ? record.userId._id : user?._id;
     if (!userId) return;
 
+    const monthNumber = new Date(`${record.month} 1, ${record.year}`).getMonth() + 1;
+
     Alert.alert(
-      'Daily Salary Checkout',
-      `Checkout daily salary for ${record.month} ${record.year}?`,
+      t('dailySalaryCheckout'),
+      t('checkoutDailySalary', { 
+        month: t(getTranslatedMonth(monthNumber)), 
+        year: record.year.toString() 
+      }),
       [
         { text: t('cancel'), style: 'cancel' },
         {
           text: t('checkout'),
+          style: 'default',
           onPress: async () => {
             try {
               const response = await apiService.checkoutMonthlySalary(
-                userId.toString(),
+                userId,
                 record.month,
                 record.year
               );
               if (response.success) {
                 Alert.alert(
                   t('success'),
-                  'Daily salary checkout completed successfully',
+                  t('dailySalaryCheckoutCompleted'),
                   [
                     {
                       text: t('viewReceipt'),
                       onPress: () => {
-                        // Navigate to receipts or show receipt details
-                        console.log('Receipt:', response.data?.receipt);
+                        // Navigate to receipts or show receipt
+                        console.log('Navigate to receipt:', response.data?.receipt);
                       },
                     },
                     { text: 'OK' },
@@ -195,11 +154,11 @@ export const SalaryScreen: React.FC = () => {
                 );
                 loadSalaryRecords();
               } else {
-                Alert.alert(t('error'), response.error || 'Failed to complete daily salary checkout');
+                Alert.alert(t('error'), response.error || t('failedToCompleteDailySalaryCheckout'));
               }
             } catch (error) {
               console.error('Error during daily salary checkout:', error);
-              Alert.alert(t('error'), 'Failed to complete daily salary checkout');
+              Alert.alert(t('error'), t('failedToCompleteDailySalaryCheckout'));
             }
           },
         },
@@ -212,52 +171,34 @@ export const SalaryScreen: React.FC = () => {
   };
 
   const SalaryCard: React.FC<{ record: SalaryRecord }> = ({ record }) => {
-    const isDownloading = downloadingId === record._id;
+    const monthNumber = new Date(`${record.month} 1, ${record.year}`).getMonth() + 1;
     
     return (
       <ThemedCard style={styles.salaryCard}>
         <View style={styles.cardHeader}>
-          <View style={styles.periodSection}>
-            <Text style={[styles.period, { color: colors.text }]}>
-              {record.month} {record.year}
+          <View style={styles.periodInfo}>
+            <Text style={[styles.periodText, { color: colors.text }]}>
+              {t(getTranslatedMonth(monthNumber))} {record.year}
             </Text>
-            <View style={styles.statusContainer}>
-              <Ionicons
-                name={record.isPaid ? 'checkmark-circle' : 'time'}
-                size={16}
-                color={record.isPaid ? colors.success : colors.warning}
-              />
-              <Text
-                style={[
-                  styles.status,
-                  { color: record.isPaid ? colors.success : colors.warning },
-                ]}
-              >
+            <View style={[styles.statusBadge, { 
+              backgroundColor: record.isPaid ? colors.success : colors.warning 
+            }]}>
+              <Text style={styles.statusText}>
                 {record.isPaid ? t('paid') : t('pending')}
               </Text>
             </View>
           </View>
-
-          <TouchableOpacity
-            onPress={() => handleGenerateSalarySlip(record)}
-            style={[
-              styles.downloadButton, 
-              { backgroundColor: isDownloading ? colors.secondary : colors.primary }
-            ]}
-            disabled={isDownloading}
-          >
-            {isDownloading ? (
-              <Ionicons name="hourglass" size={16} color="#ffffff" />
-            ) : (
-              <Ionicons name="download" size={16} color="#ffffff" />
-            )}
-          </TouchableOpacity>
+          {record.isPaid && record.paidAt && (
+            <Text style={[styles.paidDate, { color: colors.secondary }]}>
+              {t('paidOn')} {new Date(record.paidAt).toLocaleDateString()}
+            </Text>
+          )}
         </View>
 
         <View style={styles.salaryBreakdown}>
           <View style={styles.salaryRow}>
             <Text style={[styles.salaryLabel, { color: colors.secondary }]}>
-              Present Days:
+              {t('presentDays')}:
             </Text>
             <Text style={[styles.salaryValue, { color: colors.text }]}>
               {record.presentDays || 0}/{record.totalWorkingDays || 0}
@@ -266,7 +207,7 @@ export const SalaryScreen: React.FC = () => {
 
           <View style={styles.salaryRow}>
             <Text style={[styles.salaryLabel, { color: colors.secondary }]}>
-              Absent Days:
+              {t('absentDays')}:
             </Text>
             <Text style={[styles.salaryValue, { color: colors.error }]}>
               {record.absentDays || 0}
@@ -275,16 +216,16 @@ export const SalaryScreen: React.FC = () => {
 
           <View style={styles.salaryRow}>
             <Text style={[styles.salaryLabel, { color: colors.secondary }]}>
-              Daily Rate:
+              {t('dailyRate')}:
             </Text>
             <Text style={[styles.salaryValue, { color: colors.text }]}>
-              {record.presentDays ? formatCurrency(record.baseSalary / record.presentDays) : '0 DH'}/day
+              {record.presentDays ? formatCurrency(record.baseSalary / record.presentDays) : '0 DH'}/{t('perDay')}
             </Text>
           </View>
 
           <View style={styles.salaryRow}>
             <Text style={[styles.salaryLabel, { color: colors.secondary }]}>
-              Earned Salary:
+              {t('earnedSalary')}:
             </Text>
             <Text style={[styles.salaryValue, { color: colors.success }]}>
               {formatCurrency(record.baseSalary)}
@@ -294,7 +235,7 @@ export const SalaryScreen: React.FC = () => {
           {record.deductions > 0 && (
             <View style={styles.salaryRow}>
               <Text style={[styles.salaryLabel, { color: colors.secondary }]}>
-                Missed Salary:
+                {t('missedSalary')}:
               </Text>
               <Text style={[styles.salaryValue, { color: colors.error }]}>
                 -{formatCurrency(record.deductions)}
@@ -315,7 +256,7 @@ export const SalaryScreen: React.FC = () => {
 
           <View style={[styles.salaryRow, styles.totalRow]}>
             <Text style={[styles.totalLabel, { color: colors.text }]}>
-              Total Paid:
+              {t('totalPaid')}:
             </Text>
             <Text style={[styles.totalValue, { color: colors.primary }]}>
               {formatCurrency(record.totalSalary)}
@@ -323,11 +264,11 @@ export const SalaryScreen: React.FC = () => {
           </View>
         </View>
 
-        <View style={styles.actionButtons}>
+        <View style={styles.cardActions}>
           {user?.role === 'admin' && !record.isPaid && (
             <ThemedButton
               title={t('markAsPaid')}
-              onPress={() => handleMarkAsPaid(record._id)}
+              onPress={() => {/* Handle mark as paid */}}
               size="small"
               variant="outline"
               style={styles.actionButton}
@@ -336,26 +277,27 @@ export const SalaryScreen: React.FC = () => {
           
           {user?.role === 'worker' && !record.isPaid && (
             <ThemedButton
-              title="Daily Checkout"
+              title={t('dailyCheckout')}
               onPress={() => handleMonthlyCheckout(record)}
               size="small"
               style={styles.actionButton}
             />
           )}
-        </View>
 
-        {record.paidAt && (
-          <Text style={[styles.paidDate, { color: colors.secondary }]}>
-            {t('paidOn')} {new Date(record.paidAt).toLocaleDateString()}
-          </Text>
-        )}
+          <ThemedButton
+            title={t('generateSalarySlip')}
+            onPress={() => {/* Handle generate slip */}}
+            size="small"
+            variant="outline"
+            style={styles.actionButton}
+          />
+        </View>
       </ThemedCard>
     );
   };
 
-  // Calculate total pending salary for workers - ensure salaryRecords is always an array
-  const salaryArray = Array.isArray(salaryRecords) ? salaryRecords : [];
-  const totalPending = salaryArray
+  // Calculate pending salaries total
+  const pendingTotal = salaryRecords
     .filter(record => !record.isPaid)
     .reduce((sum, record) => sum + record.totalSalary, 0);
 
@@ -363,25 +305,22 @@ export const SalaryScreen: React.FC = () => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-          Daily Salary
+          {t('dailySalary')}
         </Text>
         
         {user?.role === 'admin' && (
           <View style={styles.headerButtons}>
             <ThemedButton
               title={t('exportPDF')}
-              onPress={() => {
-                setSelectedSalaryId(null);
-                setShowLanguageModal(true);
-              }}
+              onPress={handleExportPDF}
               size="small"
-              style={styles.exportButton}
               variant="outline"
+              style={styles.exportButton}
               loading={exporting}
               disabled={exporting}
             />
             <ThemedButton
-              title="Generate Daily"
+              title={t('generateDaily')}
               onPress={handleGenerateMonthly}
               size="small"
               style={styles.generateButton}
@@ -390,18 +329,20 @@ export const SalaryScreen: React.FC = () => {
         )}
       </View>
 
-      {user?.role === 'worker' && totalPending > 0 && (
-        <ThemedCard style={styles.summaryCard}>
-          <View style={styles.summaryHeader}>
-            <Ionicons name="card" size={24} color={colors.primary} />
-            <Text style={[styles.summaryTitle, { color: colors.text }]}>
-              Pending Daily Salaries
+      {pendingTotal > 0 && (
+        <View style={styles.summaryContainer}>
+          <ThemedCard style={styles.summaryCard}>
+            <View style={styles.summaryHeader}>
+              <Ionicons name="card" size={24} color={colors.primary} />
+              <Text style={[styles.summaryTitle, { color: colors.text }]}>
+                {t('pendingDailySalaries')}
+              </Text>
+            </View>
+            <Text style={[styles.summaryAmount, { color: colors.primary }]}>
+              {formatCurrency(pendingTotal)}
             </Text>
-          </View>
-          <Text style={[styles.summaryAmount, { color: colors.primary }]}>
-            {formatCurrency(totalPending)}
-          </Text>
-        </ThemedCard>
+          </ThemedCard>
+        </View>
       )}
 
       <ScrollView
@@ -416,30 +357,22 @@ export const SalaryScreen: React.FC = () => {
               {t('loading')}
             </Text>
           </View>
-        ) : salaryArray.length === 0 ? (
+        ) : salaryRecords.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="card" size={64} color={colors.secondary} />
             <Text style={[styles.emptyText, { color: colors.text }]}>
               {t('noData')}
             </Text>
+            <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
+              {user?.role === 'admin' ? t('generateDaily') : t('noData')}
+            </Text>
           </View>
         ) : (
-          salaryArray.map((record) => (
-            <SalaryCard key={record._id} record={record} />
+          salaryRecords.map((record) => (
+            <SalaryCard key={`${record.userId._id}-${record.month}-${record.year}`} record={record} />
           ))
         )}
       </ScrollView>
-
-      <PDFLanguageModal
-        visible={showLanguageModal}
-        onClose={() => {
-          setShowLanguageModal(false);
-          setSelectedSalaryId(null);
-        }}
-        onGenerate={selectedSalaryId ? handleDownloadSalarySlip : handleExportPDF}
-        title={selectedSalaryId ? "Download Salary Slip" : "Export All Salaries"}
-        loading={exporting || !!downloadingId}
-      />
     </View>
   );
 };
@@ -469,9 +402,13 @@ const styles = StyleSheet.create({
   generateButton: {
     paddingHorizontal: 16,
   },
-  summaryCard: {
-    marginHorizontal: 20,
+  summaryContainer: {
+    paddingHorizontal: 20,
     marginBottom: 10,
+  },
+  summaryCard: {
+    padding: 20,
+    alignItems: 'center',
   },
   summaryHeader: {
     flexDirection: 'row',
@@ -495,34 +432,30 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: 16,
   },
-  periodSection: {
-    flex: 1,
-  },
-  period: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  periodInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4,
   },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  periodText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
-  status: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 4,
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  downloadButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+  statusText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  paidDate: {
+    fontSize: 12,
   },
   salaryBreakdown: {
     marginBottom: 16,
@@ -554,15 +487,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  actionButtons: {
-    marginBottom: 12,
+  cardActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   actionButton: {
-    alignSelf: 'flex-start',
-  },
-  paidDate: {
-    fontSize: 12,
-    fontStyle: 'italic',
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -582,5 +512,10 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

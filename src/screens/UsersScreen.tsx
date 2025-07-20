@@ -17,6 +17,7 @@ import { ThemedButton } from '../components/ThemedButton';
 import { UserFormModal } from '../components/UserFormModal';
 import { apiService } from '../services/api';
 import { User } from '../types';
+import { getTranslatedMonth, getCurrentMonthNumber, getCurrentMonthName } from '../utils/dateUtils';
 
 export const UsersScreen: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -27,7 +28,7 @@ export const UsersScreen: React.FC = () => {
 
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
-  const { user: currentUser } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadUsers();
@@ -35,26 +36,20 @@ export const UsersScreen: React.FC = () => {
 
   const loadUsers = async () => {
     try {
-      console.log('🔍 Loading users...');
       const response = await apiService.getUsers();
-      console.log('🔍 Users API response:', response);
-      
       if (response.success && response.data) {
-        // Handle nested response structure
         const actualData = response.data.data || response.data;
-        console.log('🔍 Actual users data:', actualData);
-        
         if (Array.isArray(actualData)) {
           setUsers(actualData);
         } else {
-          setUsers([]); // Set empty array if not an array
+          setUsers([]);
         }
       } else {
-        setUsers([]); // Set empty array if no data
+        setUsers([]);
       }
     } catch (error) {
       console.error('Error loading users:', error);
-      setUsers([]); // Set empty array on error
+      setUsers([]);
       Alert.alert(t('error'), t('failedToLoadUsers'));
     } finally {
       setLoading(false);
@@ -67,7 +62,17 @@ export const UsersScreen: React.FC = () => {
     loadUsers();
   };
 
-  const handleDeleteUser = (userId: string, userName: string) => {
+  const openAddUserModal = () => {
+    setEditingUser(null);
+    setShowUserModal(true);
+  };
+
+  const openEditUserModal = (user: User) => {
+    setEditingUser(user);
+    setShowUserModal(true);
+  };
+
+  const deleteUser = (userId: string, userName: string) => {
     Alert.alert(
       t('deleteUser'),
       `${t('areYouSureDeleteUser')} ${userName}?`,
@@ -76,7 +81,7 @@ export const UsersScreen: React.FC = () => {
         {
           text: t('delete'),
           style: 'destructive',
-          onPress: () => deleteUser(userId),
+          onPress: () => confirmDeleteUser(userId),
         },
       ]
     );
@@ -84,18 +89,23 @@ export const UsersScreen: React.FC = () => {
 
   const handleCheckout = (userId: string, userName: string) => {
     const currentDate = new Date();
-    const currentMonth = currentDate.toLocaleString('en-US', { month: 'long' });
+    const currentMonthNumber = getCurrentMonthNumber();
+    const currentMonthName = getCurrentMonthName();
     const currentYear = currentDate.getFullYear();
 
     Alert.alert(
-      'Checkout Salary',
-      `Process salary checkout for ${userName} for ${currentMonth} ${currentYear}?`,
+      t('checkoutSalary'),
+      t('processSalaryCheckout', { 
+        name: userName, 
+        month: t(getTranslatedMonth(currentMonthNumber)), 
+        year: currentYear.toString() 
+      }),
       [
         { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Checkout',
+          text: t('checkout'),
           style: 'default',
-          onPress: () => processCheckout(userId, userName, currentMonth, currentYear),
+          onPress: () => processCheckout(userId, userName, currentMonthName, currentYear),
         },
       ]
     );
@@ -108,33 +118,35 @@ export const UsersScreen: React.FC = () => {
       
       if (response.success) {
         Alert.alert(
-          'Success',
-          `Salary checkout completed for ${userName}. Receipt has been generated and saved.`,
+          t('success'),
+          t('salaryCheckoutCompleted', { name: userName }),
           [{ text: 'OK' }]
         );
       } else {
         Alert.alert(
-          'Error',
-          response.error || 'Failed to process checkout'
+          t('error'),
+          response.error || t('failedToProcessCheckout')
         );
       }
     } catch (error) {
       console.error('Error processing checkout:', error);
       Alert.alert(
-        'Error',
-        'An error occurred while processing the checkout'
+        t('error'),
+        t('errorProcessingCheckout')
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteUser = async (userId: string) => {
+  const confirmDeleteUser = async (userId: string) => {
     try {
       const response = await apiService.deleteUser(userId);
       if (response.success) {
-        setUsers(Array.isArray(users) ? users.filter(user => user._id !== userId) : []);
         Alert.alert(t('success'), t('userDeletedSuccessfully'));
+        loadUsers(); // Reload users after deletion
+      } else {
+        Alert.alert(t('error'), response.error || t('failedToDeleteUser'));
       }
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -142,22 +154,7 @@ export const UsersScreen: React.FC = () => {
     }
   };
 
-  const openAddUserModal = useCallback(() => {
-    setEditingUser(null);
-    setShowUserModal(true);
-  }, []);
-
-  const openEditUserModal = useCallback((user: User) => {
-    setEditingUser(user);
-    setShowUserModal(true);
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setShowUserModal(false);
-    setEditingUser(null);
-  }, []);
-
-  const handleModalSave = useCallback(() => {
+  const handleUserSaved = useCallback(() => {
     setShowUserModal(false);
     setEditingUser(null);
     loadUsers(); // Reload users after save
@@ -176,23 +173,28 @@ export const UsersScreen: React.FC = () => {
             {user.name}
           </Text>
           <Text style={[styles.userEmail, { color: colors.secondary }]}>
-            ID: {user.idCardNumber}
+            {user.email}
           </Text>
-          <Text style={[styles.userRole, { color: colors.primary }]}>
-            {user.role === 'admin' ? t('admin') : t('worker')}
-          </Text>
+          <View style={styles.userMeta}>
+            <View style={[styles.roleTag, { 
+              backgroundColor: user.role === 'admin' ? colors.warning : colors.success 
+            }]}>
+              <Text style={styles.roleText}>
+                {user.role === 'admin' ? t('admin') : t('worker')}
+              </Text>
+            </View>
+            {user.position && (
+              <Text style={[styles.userPosition, { color: colors.secondary }]}>
+                {user.position}
+              </Text>
+            )}
+          </View>
         </View>
       </View>
 
-      {user.position && (
-        <Text style={[styles.userPosition, { color: colors.secondary }]}>
-          {user.position}
-        </Text>
-      )}
-
       {user.salary && (
         <Text style={[styles.userSalary, { color: colors.text }]}>
-          Daily Rate: {user.salary} DH/day
+          {t('dailyRate')}: {user.salary} DH/{t('perDay')}
         </Text>
       )}
 
@@ -201,7 +203,7 @@ export const UsersScreen: React.FC = () => {
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
           onPress={() => openEditUserModal(user)}
         >
-          <Ionicons name="create" size={16} color="#ffffff" />
+          <Ionicons name="pencil" size={16} color="#ffffff" />
           <Text style={styles.actionButtonText}>{t('edit')}</Text>
         </TouchableOpacity>
 
@@ -211,13 +213,13 @@ export const UsersScreen: React.FC = () => {
             onPress={() => handleCheckout(user._id, user.name)}
           >
             <Ionicons name="card" size={16} color="#ffffff" />
-            <Text style={styles.actionButtonText}>Checkout</Text>
+            <Text style={styles.actionButtonText}>{t('checkout')}</Text>
           </TouchableOpacity>
         )}
 
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.error }]}
-          onPress={() => handleDeleteUser(user._id, user.name)}
+          onPress={() => deleteUser(user._id, user.name)}
         >
           <Ionicons name="trash" size={16} color="#ffffff" />
           <Text style={styles.actionButtonText}>{t('delete')}</Text>
@@ -226,34 +228,21 @@ export const UsersScreen: React.FC = () => {
     </ThemedCard>
   ));
 
-  if (currentUser?.role !== 'admin') {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.accessDenied}>
-          <Ionicons name="lock-closed" size={64} color={colors.secondary} />
-          <Text style={[styles.accessDeniedText, { color: colors.text }]}>
-            {t('accessDenied')}
-          </Text>
-          <Text style={[styles.accessDeniedSubtext, { color: colors.secondary }]}>
-            {t('adminPrivilegesRequired')}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
           {t('users')}
         </Text>
-        <ThemedButton
-          title={t('addUser')}
-          onPress={openAddUserModal}
-          size="small"
-          style={styles.addButton}
-        />
+        
+        {user?.role === 'admin' && (
+          <ThemedButton
+            title={t('addUser')}
+            onPress={openAddUserModal}
+            size="small"
+            style={styles.addButton}
+          />
+        )}
       </View>
 
       <ScrollView
@@ -261,7 +250,6 @@ export const UsersScreen: React.FC = () => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        keyboardShouldPersistTaps="handled"
       >
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -275,17 +263,25 @@ export const UsersScreen: React.FC = () => {
             <Text style={[styles.emptyText, { color: colors.text }]}>
               {t('noData')}
             </Text>
+            <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
+              {user?.role === 'admin' ? t('addUser') : t('noData')}
+            </Text>
           </View>
         ) : (
-          Array.isArray(users) ? users.map((user) => <UserCard key={user._id} user={user} />) : null
+          users.map((userItem) => (
+            <UserCard key={userItem._id} user={userItem} />
+          ))
         )}
       </ScrollView>
 
       <UserFormModal
         visible={showUserModal}
         editingUser={editingUser}
-        onClose={closeModal}
-        onSave={handleModalSave}
+        onClose={() => {
+          setShowUserModal(false);
+          setEditingUser(null);
+        }}
+        onSave={handleUserSaved}
       />
     </View>
   );
@@ -330,7 +326,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   avatarText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#ffffff',
   },
@@ -344,16 +340,28 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 14,
+    marginBottom: 4,
+  },
+  userMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  roleTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginRight: 8,
     marginBottom: 2,
   },
-  userRole: {
+  roleText: {
     fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'capitalize',
+    fontWeight: 'bold',
+    color: '#ffffff',
   },
   userPosition: {
-    fontSize: 14,
-    marginBottom: 8,
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   userSalary: {
     fontSize: 14,
@@ -398,19 +406,10 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     marginTop: 16,
+    marginBottom: 8,
   },
-  accessDenied: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  accessDeniedText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 16,
-  },
-  accessDeniedSubtext: {
-    fontSize: 16,
-    marginTop: 8,
+  emptySubtext: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

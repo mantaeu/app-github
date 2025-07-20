@@ -279,7 +279,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
           <View style={styles.formGroup}>
             <Text style={[styles.label, { color: colors.text }]}>
-              Daily Rate (DH)
+              {t('dailyRate')} (DH)
             </Text>
             <TextInput
               style={[
@@ -292,13 +292,13 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               ]}
               value={formData.salary}
               onChangeText={(text) => setFormData(prev => ({ ...prev, salary: text }))}
-              placeholder="Enter daily rate (e.g., 50)"
+              placeholder={`${t('dailyRate')} (${t('perDay')})`}
               placeholderTextColor={colors.secondary}
               keyboardType="numeric"
               returnKeyType="next"
             />
             <Text style={[styles.helpText, { color: colors.secondary }]}>
-              Amount paid per working day (e.g., 50 DH per day)
+              {t('dailyRateDetails')}
             </Text>
           </View>
 

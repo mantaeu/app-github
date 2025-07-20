@@ -68,14 +68,14 @@ export const ProfileScreen: React.FC = () => {
         <Text style={[styles.cardTitle, { color: colors.text }]}>{t('quickOverview')}</Text>
         <View style={styles.statsContainer}>
           <StatItem
-            label="Daily Rate"
-            value={`${user?.salary || 0} DH/day`}
+            label={t('dailyRate')}
+            value={`${user?.salary || 0} DH/${t('perDay')}`}
             icon="card-outline"
             color="#10B981"
           />
           <StatItem
-            label="Worker Type"
-            value="Daily Worker"
+            label={t('workerType')}
+            value={t('dailyWorker')}
             icon="time-outline"
             color="#3B82F6"
           />
@@ -225,17 +225,17 @@ export const ProfileScreen: React.FC = () => {
 
     return (
       <ThemedCard style={styles.compensationCard}>
-        <Text style={[styles.cardTitle, { color: colors.text }]}>Daily Rate Details</Text>
+        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('dailyRateDetails')}</Text>
         <View style={styles.compensationContainer}>
           <CompensationItem
-            label="Daily Rate"
-            value={`${user?.salary || 0} DH per day`}
+            label={t('dailyRate')}
+            value={`${user?.salary || 0} DH ${t('perDay')}`}
             icon="card-outline"
             color="#10B981"
           />
           <CompensationItem
-            label="Payment Method"
-            value="Daily Attendance Based"
+            label={t('paymentMethod')}
+            value={t('dailyAttendanceBased')}
             icon="time-outline"
             color="#3B82F6"
           />
