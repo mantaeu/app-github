@@ -29,9 +29,7 @@
       "output": "static",
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-dev-client"
-    ],
+    "plugins": [],
     "extra": {
       "eas": {
         "projectId": "b0263e38-ac56-4a6c-94fe-8afb5ca43466"
