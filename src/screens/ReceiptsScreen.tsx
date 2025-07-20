@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
-  Modal,
-  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -16,9 +14,12 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { ThemedButton } from '../components/ThemedButton';
+import { SearchBar } from '../components/SearchBar';
+import { CreateReceiptModal } from '../components/CreateReceiptModal';
 import PDFLanguageModal from '../components/PDFLanguageModal';
 import { apiService } from '../services/api';
 import { Receipt, User } from '../types';
+import { useDebounce } from '../hooks/useDebounce';
 
 export const ReceiptsScreen: React.FC = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
@@ -30,16 +31,14 @@ export const ReceiptsScreen: React.FC = () => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    userId: '',
-    type: 'payment',
-    amount: '',
-    description: '',
-  });
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
   const { user } = useAuth();
+
+  // Debounce search query to prevent too many re-renders
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   useEffect(() => {
     loadReceipts();
@@ -48,7 +47,32 @@ export const ReceiptsScreen: React.FC = () => {
     }
   }, []);
 
-  const loadReceipts = async () => {
+  // Memoized filtered receipts using debounced search query
+  const filteredReceipts = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) {
+      return receipts;
+    }
+
+    const query = debouncedSearchQuery.toLowerCase().trim();
+    return receipts.filter(receipt => {
+      // Safe string operations with fallback to empty string
+      const userName = (receipt?.userId?.name || '').toLowerCase();
+      const userEmail = (receipt?.userId?.email || '').toLowerCase();
+      const type = (receipt?.type || '').toLowerCase();
+      const description = (receipt?.description || '').toLowerCase();
+      const amount = (receipt?.amount || 0).toString();
+      const date = receipt?.date ? new Date(receipt.date).toLocaleDateString().toLowerCase() : '';
+
+      return userName.includes(query) ||
+             userEmail.includes(query) ||
+             type.includes(query) ||
+             description.includes(query) ||
+             amount.includes(query) ||
+             date.includes(query);
+    });
+  }, [receipts, debouncedSearchQuery]);
+
+  const loadReceipts = useCallback(async () => {
     try {
       const response = await apiService.getReceipts(
         user?.role === 'worker' ? user._id : undefined
@@ -72,9 +96,9 @@ export const ReceiptsScreen: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user?.role, user?._id, t]);
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       const response = await apiService.getUsers();
       if (response.success && response.data) {
@@ -86,14 +110,18 @@ export const ReceiptsScreen: React.FC = () => {
     } catch (error) {
       console.error('Error loading users:', error);
     }
-  };
+  }, []);
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadReceipts();
-  };
+  }, [loadReceipts]);
 
-  const handleExportPDF = async (language: string) => {
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+  }, []);
+
+  const handleExportPDF = useCallback(async (language: string) => {
     if (user?.role !== 'admin') return;
 
     try {
@@ -107,14 +135,14 @@ export const ReceiptsScreen: React.FC = () => {
       setExporting(false);
       setShowLanguageModal(false);
     }
-  };
+  }, [user?.role, t]);
 
-  const handleDownloadReceipt = async (receipt: Receipt) => {
+  const handleDownloadReceipt = useCallback(async (receipt: Receipt) => {
     setSelectedReceiptId(receipt._id);
     setShowLanguageModal(true);
-  };
+  }, []);
 
-  const handleDownloadReceiptWithLanguage = async (language: string) => {
+  const handleDownloadReceiptWithLanguage = useCallback(async (language: string) => {
     if (!selectedReceiptId) return;
 
     try {
@@ -129,176 +157,29 @@ export const ReceiptsScreen: React.FC = () => {
       setSelectedReceiptId(null);
       setShowLanguageModal(false);
     }
-  };
+  }, [selectedReceiptId, t]);
 
-  const resetForm = () => {
-    setFormData({
-      userId: '',
-      type: 'payment',
-      amount: '',
-      description: '',
-    });
-  };
-
-  const openCreateModal = () => {
-    resetForm();
+  const openCreateModal = useCallback(() => {
     setShowCreateModal(true);
-  };
+  }, []);
 
-  const handleCreateReceipt = async () => {
-    if (!formData.userId || !formData.amount || !formData.description) {
-      Alert.alert(t('error'), t('fillAllRequiredFields'));
-      return;
-    }
+  const closeCreateModal = useCallback(() => {
+    setShowCreateModal(false);
+  }, []);
 
-    try {
-      const receiptData = {
-        userId: formData.userId,
-        type: formData.type,
-        amount: parseFloat(formData.amount),
-        description: formData.description.trim(),
-      };
+  const handleReceiptCreated = useCallback(() => {
+    loadReceipts();
+  }, [loadReceipts]);
 
-      const response = await apiService.createReceipt(receiptData);
+  const formatCurrency = useCallback((amount: number) => {
+    return `${(amount || 0).toLocaleString()} DH`;
+  }, []);
 
-      if (response.success) {
-        Alert.alert(t('success'), t('receiptCreatedSuccessfully'));
-        setShowCreateModal(false);
-        resetForm();
-        loadReceipts();
-      } else {
-        Alert.alert(t('error'), response.error || t('failedToCreateReceipt'));
-      }
-    } catch (error) {
-      console.error('Error creating receipt:', error);
-      Alert.alert(t('error'), t('failedToCreateReceipt'));
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return `${amount.toLocaleString()} DH`;
-  };
-
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleDateString();
-  };
+  }, []);
 
-  const CreateReceiptModal = () => (
-    <Modal
-      visible={showCreateModal}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={() => setShowCreateModal(false)}
-    >
-      <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setShowCreateModal(false)}>
-            <Ionicons name="close" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.modalTitle, { color: colors.text }]}>
-            {t('createReceipt')}
-          </Text>
-          <TouchableOpacity onPress={handleCreateReceipt}>
-            <Text style={[styles.saveButton, { color: colors.primary }]}>{t('create')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.modalContent}>
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>{t('user')} *</Text>
-            <View style={styles.userSelector}>
-              {users.map((userItem) => (
-                <TouchableOpacity
-                  key={userItem._id}
-                  style={[
-                    styles.userOption,
-                    {
-                      backgroundColor: formData.userId === userItem._id ? colors.primary : colors.card,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={() => setFormData({ ...formData, userId: userItem._id })}
-                >
-                  <Text
-                    style={[
-                      styles.userOptionText,
-                      { color: formData.userId === userItem._id ? '#ffffff' : colors.text },
-                    ]}
-                  >
-                    {userItem.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>{t('type')} *</Text>
-            <View style={styles.typeContainer}>
-              {['payment', 'salary', 'invoice'].map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.typeButton,
-                    {
-                      backgroundColor: formData.type === type ? colors.primary : colors.card,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={() => setFormData({ ...formData, type })}
-                >
-                  <Text
-                    style={[
-                      styles.typeText,
-                      { color: formData.type === type ? '#ffffff' : colors.text },
-                    ]}
-                  >
-                    {type === 'payment' ? t('payment') : 
-                     type === 'invoice' ? t('invoice') : 
-                     type.charAt(0).toUpperCase() + type.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>{t('amount')} *</Text>
-            <TextInput
-              style={[
-                styles.input,
-                { backgroundColor: colors.card, color: colors.text, borderColor: colors.border },
-              ]}
-              value={formData.amount}
-              onChangeText={(text) => setFormData({ ...formData, amount: text })}
-              placeholder={t('enterAmount')}
-              placeholderTextColor={colors.secondary}
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>{t('description')} *</Text>
-            <TextInput
-              style={[
-                styles.input,
-                styles.textArea,
-                { backgroundColor: colors.card, color: colors.text, borderColor: colors.border },
-              ]}
-              value={formData.description}
-              onChangeText={(text) => setFormData({ ...formData, description: text })}
-              placeholder={t('enterDescription')}
-              placeholderTextColor={colors.secondary}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-
-  const ReceiptCard: React.FC<{ receipt: Receipt }> = ({ receipt }) => {
+  const ReceiptCard = React.memo<{ receipt: Receipt }>(({ receipt }) => {
     const isDownloading = downloadingId === receipt._id;
     
     return (
@@ -307,26 +188,31 @@ export const ReceiptsScreen: React.FC = () => {
           <View style={styles.typeSection}>
             <View style={[styles.typeIcon, { backgroundColor: colors.success }]}>
               <Ionicons
-                name={receipt.type === 'salary' ? 'card' : receipt.type === 'invoice' ? 'document' : 'cash'}
+                name={receipt?.type === 'salary' ? 'card' : receipt?.type === 'invoice' ? 'document' : 'cash'}
                 size={20}
                 color="#ffffff"
               />
             </View>
             <View style={styles.receiptInfo}>
               <Text style={[styles.receiptType, { color: colors.text }]}>
-                {receipt.type === 'payment' ? t('payment') : 
-                 receipt.type === 'invoice' ? t('invoice') : 
-                 receipt.type.charAt(0).toUpperCase() + receipt.type.slice(1)}
+                {receipt?.type === 'payment' ? t('payment') : 
+                 receipt?.type === 'invoice' ? t('invoice') : 
+                 (receipt?.type || '').charAt(0).toUpperCase() + (receipt?.type || '').slice(1)}
               </Text>
               <Text style={[styles.receiptDate, { color: colors.secondary }]}>
-                {formatDate(receipt.date)}
+                {receipt?.date ? formatDate(receipt.date) : 'Unknown Date'}
               </Text>
+              {user?.role === 'admin' && receipt?.userId && (
+                <Text style={[styles.userName, { color: colors.secondary }]}>
+                  {receipt.userId.name || 'Unknown User'}
+                </Text>
+              )}
             </View>
           </View>
 
           <View style={styles.amountSection}>
             <Text style={[styles.amount, { color: colors.primary }]}>
-              {formatCurrency(receipt.amount)}
+              {formatCurrency(receipt?.amount || 0)}
             </Text>
             <TouchableOpacity
               onPress={() => handleDownloadReceipt(receipt)}
@@ -346,10 +232,10 @@ export const ReceiptsScreen: React.FC = () => {
         </View>
 
         <Text style={[styles.description, { color: colors.text }]}>
-          {receipt.description}
+          {receipt?.description || 'No description'}
         </Text>
 
-        {receipt.metadata && (
+        {receipt?.metadata && (
           <View style={styles.metadata}>
             <Text style={[styles.metadataLabel, { color: colors.secondary }]}>
               {t('additionalInfo')}:
@@ -363,10 +249,10 @@ export const ReceiptsScreen: React.FC = () => {
         )}
       </ThemedCard>
     );
-  };
+  });
 
   // Calculate totals for summary
-  const totalAmount = receipts.reduce((sum, receipt) => sum + receipt.amount, 0);
+  const totalAmount = filteredReceipts.reduce((sum, receipt) => sum + (receipt?.amount || 0), 0);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -399,8 +285,16 @@ export const ReceiptsScreen: React.FC = () => {
         )}
       </View>
 
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+          placeholder={`${t('search')} ${t('receipts').toLowerCase()}...`}
+        />
+      </View>
+
       {/* Summary Card */}
-      {receipts.length > 0 && (
+      {filteredReceipts.length > 0 && (
         <View style={styles.summaryContainer}>
           <ThemedCard style={styles.summaryCard}>
             <View style={styles.summaryHeader}>
@@ -415,7 +309,7 @@ export const ReceiptsScreen: React.FC = () => {
                   {t('totalPayments')}
                 </Text>
                 <Text style={[styles.summaryValue, { color: colors.text }]}>
-                  {receipts.length}
+                  {filteredReceipts.length}
                 </Text>
               </View>
               <View style={styles.summaryItem}>
@@ -431,7 +325,7 @@ export const ReceiptsScreen: React.FC = () => {
               <View style={styles.typeItem}>
                 <View style={[styles.typeIndicator, { backgroundColor: colors.success }]} />
                 <Text style={[styles.typeText, { color: colors.text }]}>
-                  {t('allPayments')}: {receipts.length}
+                  {searchQuery ? 'Filtered' : t('allPayments')}: {filteredReceipts.length}
                 </Text>
               </View>
             </View>
@@ -444,6 +338,8 @@ export const ReceiptsScreen: React.FC = () => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
       >
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -451,24 +347,38 @@ export const ReceiptsScreen: React.FC = () => {
               {t('loading')}
             </Text>
           </View>
-        ) : receipts.length === 0 ? (
+        ) : filteredReceipts.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="document" size={64} color={colors.secondary} />
             <Text style={[styles.emptyText, { color: colors.text }]}>
-              {t('noData')}
+              {searchQuery ? `No receipts found for "${searchQuery}"` : t('noData')}
             </Text>
             <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
-              {t('noPaymentReceipts')}
+              {searchQuery ? 'Try a different search term' : t('noPaymentReceipts')}
             </Text>
           </View>
         ) : (
-          Array.isArray(receipts) ? receipts.map((receipt) => (
-            <ReceiptCard key={receipt._id} receipt={receipt} />
-          )) : null
+          <>
+            {searchQuery && (
+              <View style={styles.searchResults}>
+                <Text style={[styles.searchResultsText, { color: colors.secondary }]}>
+                  {filteredReceipts.length} {filteredReceipts.length === 1 ? 'receipt' : 'receipts'} found
+                </Text>
+              </View>
+            )}
+            {filteredReceipts.map((receipt) => (
+              <ReceiptCard key={receipt._id} receipt={receipt} />
+            ))}
+          </>
         )}
       </ScrollView>
 
-      <CreateReceiptModal />
+      <CreateReceiptModal
+        visible={showCreateModal}
+        users={users}
+        onClose={closeCreateModal}
+        onSuccess={handleReceiptCreated}
+      />
       
       <PDFLanguageModal
         visible={showLanguageModal}
@@ -508,6 +418,17 @@ const styles = StyleSheet.create({
   },
   createButton: {
     paddingHorizontal: 16,
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+  },
+  searchResults: {
+    paddingHorizontal: 4,
+    marginBottom: 12,
+  },
+  searchResultsText: {
+    fontSize: 14,
+    fontStyle: 'italic',
   },
   summaryContainer: {
     paddingHorizontal: 20,
@@ -598,6 +519,11 @@ const styles = StyleSheet.create({
   },
   receiptDate: {
     fontSize: 12,
+    marginBottom: 2,
+  },
+  userName: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   amountSection: {
     alignItems: 'flex-end',
@@ -656,77 +582,5 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     textAlign: 'center',
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e1e1',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  saveButton: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  userSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  userOption: {
-    padding: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  userOptionText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  typeContainer: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  typeButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  typeText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

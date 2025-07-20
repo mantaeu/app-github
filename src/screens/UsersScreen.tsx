@@ -14,6 +14,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { ThemedButton } from '../components/ThemedButton';
+import { SearchBar } from '../components/SearchBar';
 import { UserFormModal } from '../components/UserFormModal';
 import { apiService } from '../services/api';
 import { User } from '../types';
@@ -21,10 +22,12 @@ import { getTranslatedMonth, getCurrentMonthNumber, getCurrentMonthName } from '
 
 export const UsersScreen: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
@@ -33,6 +36,10 @@ export const UsersScreen: React.FC = () => {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  useEffect(() => {
+    filterUsers();
+  }, [users, searchQuery]);
 
   const loadUsers = async () => {
     try {
@@ -55,6 +62,32 @@ export const UsersScreen: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  const filterUsers = () => {
+    if (!searchQuery.trim()) {
+      setFilteredUsers(users);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = users.filter(user => {
+      // Safe string operations with fallback to empty string
+      const name = (user?.name || '').toLowerCase();
+      const email = (user?.email || '').toLowerCase();
+      const position = (user?.position || '').toLowerCase();
+      const idCardNumber = (user?.idCardNumber || '').toLowerCase();
+      const phone = (user?.phone || '').toLowerCase();
+      const role = (user?.role || '').toLowerCase();
+
+      return name.includes(query) ||
+             email.includes(query) ||
+             position.includes(query) ||
+             idCardNumber.includes(query) ||
+             phone.includes(query) ||
+             role.includes(query);
+    });
+    setFilteredUsers(filtered);
   };
 
   const onRefresh = () => {
@@ -165,25 +198,25 @@ export const UsersScreen: React.FC = () => {
       <View style={styles.userHeader}>
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
           <Text style={styles.avatarText}>
-            {user.name.charAt(0).toUpperCase()}
+            {(user?.name || 'U').charAt(0).toUpperCase()}
           </Text>
         </View>
         <View style={styles.userInfo}>
           <Text style={[styles.userName, { color: colors.text }]}>
-            {user.name}
+            {user?.name || 'Unknown User'}
           </Text>
           <Text style={[styles.userEmail, { color: colors.secondary }]}>
-            {user.email}
+            {user?.email || 'No email'}
           </Text>
           <View style={styles.userMeta}>
             <View style={[styles.roleTag, { 
-              backgroundColor: user.role === 'admin' ? colors.warning : colors.success 
+              backgroundColor: user?.role === 'admin' ? colors.warning : colors.success 
             }]}>
               <Text style={styles.roleText}>
-                {user.role === 'admin' ? t('admin') : t('worker')}
+                {user?.role === 'admin' ? t('admin') : t('worker')}
               </Text>
             </View>
-            {user.position && (
+            {user?.position && (
               <Text style={[styles.userPosition, { color: colors.secondary }]}>
                 {user.position}
               </Text>
@@ -192,7 +225,7 @@ export const UsersScreen: React.FC = () => {
         </View>
       </View>
 
-      {user.salary && (
+      {user?.salary && (
         <Text style={[styles.userSalary, { color: colors.text }]}>
           {t('dailyRate')}: {user.salary} DH/{t('perDay')}
         </Text>
@@ -207,10 +240,10 @@ export const UsersScreen: React.FC = () => {
           <Text style={styles.actionButtonText}>{t('edit')}</Text>
         </TouchableOpacity>
 
-        {user.role === 'worker' && (
+        {user?.role === 'worker' && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: '#28a745' }]}
-            onPress={() => handleCheckout(user._id, user.name)}
+            onPress={() => handleCheckout(user._id, user.name || 'User')}
           >
             <Ionicons name="card" size={16} color="#ffffff" />
             <Text style={styles.actionButtonText}>{t('checkout')}</Text>
@@ -219,7 +252,7 @@ export const UsersScreen: React.FC = () => {
 
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.error }]}
-          onPress={() => deleteUser(user._id, user.name)}
+          onPress={() => deleteUser(user._id, user.name || 'User')}
         >
           <Ionicons name="trash" size={16} color="#ffffff" />
           <Text style={styles.actionButtonText}>{t('delete')}</Text>
@@ -245,6 +278,14 @@ export const UsersScreen: React.FC = () => {
         )}
       </View>
 
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={`${t('search')} ${t('users').toLowerCase()}...`}
+        />
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={
@@ -257,20 +298,29 @@ export const UsersScreen: React.FC = () => {
               {t('loading')}
             </Text>
           </View>
-        ) : users.length === 0 ? (
+        ) : filteredUsers.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="people" size={64} color={colors.secondary} />
             <Text style={[styles.emptyText, { color: colors.text }]}>
-              {t('noData')}
+              {searchQuery ? `No users found for "${searchQuery}"` : t('noData')}
             </Text>
             <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
-              {user?.role === 'admin' ? t('addUser') : t('noData')}
+              {searchQuery ? 'Try a different search term' : (user?.role === 'admin' ? t('addUser') : t('noData'))}
             </Text>
           </View>
         ) : (
-          users.map((userItem) => (
-            <UserCard key={userItem._id} user={userItem} />
-          ))
+          <>
+            {searchQuery && (
+              <View style={styles.searchResults}>
+                <Text style={[styles.searchResultsText, { color: colors.secondary }]}>
+                  {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'} found
+                </Text>
+              </View>
+            )}
+            {filteredUsers.map((userItem) => (
+              <UserCard key={userItem._id} user={userItem} />
+            ))}
+          </>
         )}
       </ScrollView>
 
@@ -304,6 +354,17 @@ const styles = StyleSheet.create({
   },
   addButton: {
     paddingHorizontal: 16,
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+  },
+  searchResults: {
+    paddingHorizontal: 4,
+    marginBottom: 12,
+  },
+  searchResultsText: {
+    fontSize: 14,
+    fontStyle: 'italic',
   },
   scrollView: {
     flex: 1,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -14,18 +15,24 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { ThemedButton } from '../components/ThemedButton';
+import { SearchBar } from '../components/SearchBar';
 import { apiService } from '../services/api';
 import { AttendanceRecord, User } from '../types';
+import { useDebounce } from '../hooks/useDebounce';
 
 export const AttendanceScreen: React.FC = () => {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
   const { user } = useAuth();
+
+  // Debounce search query to prevent too many re-renders
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   useEffect(() => {
     loadAttendance();
@@ -34,18 +41,53 @@ export const AttendanceScreen: React.FC = () => {
     }
   }, []);
 
-  const loadAttendance = async () => {
+  // Memoized filtered data using debounced search query
+  const filteredAttendance = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) {
+      return attendance;
+    }
+
+    const query = debouncedSearchQuery.toLowerCase().trim();
+    return attendance.filter(record => {
+      const userName = (record?.userId?.name || '').toLowerCase();
+      const userEmail = (record?.userId?.email || '').toLowerCase();
+      const status = (record?.status || '').toLowerCase();
+      const date = record?.date ? new Date(record.date).toLocaleDateString().toLowerCase() : '';
+
+      return userName.includes(query) ||
+             userEmail.includes(query) ||
+             status.includes(query) ||
+             date.includes(query);
+    });
+  }, [attendance, debouncedSearchQuery]);
+
+  const filteredUsers = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) {
+      return users;
+    }
+
+    const query = debouncedSearchQuery.toLowerCase().trim();
+    return users.filter(user => {
+      const name = (user?.name || '').toLowerCase();
+      const email = (user?.email || '').toLowerCase();
+      const position = (user?.position || '').toLowerCase();
+      const idCardNumber = (user?.idCardNumber || '').toLowerCase();
+
+      return name.includes(query) ||
+             email.includes(query) ||
+             position.includes(query) ||
+             idCardNumber.includes(query);
+    });
+  }, [users, debouncedSearchQuery]);
+
+  const loadAttendance = useCallback(async () => {
     try {
-      console.log('🔍 Loading attendance records...');
       const response = await apiService.getAttendance(
         user?.role === 'worker' ? user._id : undefined
       );
       
-      console.log('🔍 Attendance response:', response);
-      
       if (response.success && response.data) {
         const actualData = response.data.data || response.data;
-        console.log('🔍 Actual attendance data:', actualData);
         
         if (Array.isArray(actualData)) {
           setAttendance(actualData);
@@ -63,21 +105,18 @@ export const AttendanceScreen: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user?.role, user?._id, t]);
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
-      console.log('🔍 Loading users...');
       const response = await apiService.getUsers();
-      console.log('🔍 Users response:', response);
       
       if (response.success && response.data) {
         const actualData = response.data.data || response.data;
-        console.log('🔍 Actual users data:', actualData);
         
         if (Array.isArray(actualData)) {
           // Filter only workers for attendance management
-          const workers = actualData.filter(u => u.role === 'worker');
+          const workers = actualData.filter(u => u?.role === 'worker');
           setUsers(workers);
         } else {
           setUsers([]);
@@ -87,31 +126,26 @@ export const AttendanceScreen: React.FC = () => {
       console.error('Error loading users:', error);
       setUsers([]);
     }
-  };
+  }, []);
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadAttendance();
     if (user?.role === 'admin') {
       loadUsers();
     }
-  };
+  }, [loadAttendance, loadUsers, user?.role]);
 
-  const handleCheckIn = async (userId: string, userName: string) => {
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+  }, []);
+
+  const handleCheckIn = useCallback(async (userId: string, userName: string) => {
     if (user?.role !== 'admin') return;
     
     try {
-      console.log('🔍 Starting check-in for:', { userId, userName });
-      
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      
-      console.log('🔍 Check-in data:', {
-        userId,
-        date: today.toISOString(),
-        checkIn: now.toISOString(),
-        status: 'present'
-      });
       
       const response = await apiService.createAttendance({
         userId: userId,
@@ -120,13 +154,10 @@ export const AttendanceScreen: React.FC = () => {
         status: 'present',
       });
 
-      console.log('🔍 Check-in response:', response);
-
       if (response.success) {
         Alert.alert(t('success'), t('checkedInSuccessfully', { name: userName }));
-        await loadAttendance(); // Reload attendance data
+        await loadAttendance();
       } else {
-        console.error('Check-in failed:', response.error);
         if (response.error?.includes('already recorded')) {
           Alert.alert(t('error'), t('alreadyCheckedInToday', { name: userName }));
         } else {
@@ -137,25 +168,21 @@ export const AttendanceScreen: React.FC = () => {
       console.error('Error checking in:', error);
       Alert.alert(t('error'), t('failedToCheckIn'));
     }
-  };
+  }, [user?.role, t, loadAttendance]);
 
-  const handleCheckOut = async (attendanceId: string, userName?: string) => {
+  const handleCheckOut = useCallback(async (attendanceId: string, userName?: string) => {
     if (user?.role !== 'admin') return;
     
     try {
-      console.log('🔍 Starting check-out for:', { attendanceId, userName });
-      
       const now = new Date();
       
       const response = await apiService.updateAttendance(attendanceId, {
         checkOut: now.toISOString(),
       });
 
-      console.log('🔍 Check-out response:', response);
-
       if (response.success) {
         Alert.alert(t('success'), t('checkedOutSuccessfully', { name: userName || t('user') }));
-        await loadAttendance(); // Reload attendance data
+        await loadAttendance();
       } else {
         Alert.alert(t('error'), response.error || t('failedToCheckOut'));
       }
@@ -163,162 +190,20 @@ export const AttendanceScreen: React.FC = () => {
       console.error('Error checking out:', error);
       Alert.alert(t('error'), t('failedToCheckOut'));
     }
-  };
+  }, [user?.role, t, loadAttendance]);
 
-  const handleMarkAbsentWorkers = async () => {
-    if (user?.role !== 'admin') return;
-
-    Alert.alert(
-      t('markAbsentWorkers'),
-      t('markAbsentWorkersConfirm'),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        {
-          text: t('markAbsent'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await apiService.markAbsentWorkers();
-              if (response.success) {
-                Alert.alert(t('success'), t('absentWorkersMarked'));
-                await loadAttendance();
-              } else {
-                Alert.alert(t('error'), response.error || t('failedToMarkAbsentWorkers'));
-              }
-            } catch (error) {
-              console.error('Error marking absent workers:', error);
-              Alert.alert(t('error'), t('failedToMarkAbsentWorkers'));
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleChangeAttendanceStatus = async (userId: string, userName: string, currentStatus: string, attendanceId?: string) => {
-    if (user?.role !== 'admin') return;
-
-    const statusOptions = [
-      { label: t('present'), value: 'present' },
-      { label: t('absent'), value: 'absent' },
-      { label: t('late'), value: 'late' },
-    ];
-
-    const availableOptions = statusOptions.filter(option => option.value !== currentStatus);
-
-    Alert.alert(
-      t('changeAttendanceStatus'),
-      t('changeStatusFrom', { name: userName, currentStatus }),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        ...availableOptions.map(option => ({
-          text: option.label,
-          onPress: () => updateAttendanceStatus(userId, userName, option.value, attendanceId),
-        })),
-      ]
-    );
-  };
-
-  const updateAttendanceStatus = async (userId: string, userName: string, newStatus: string, attendanceId?: string) => {
-    try {
-      console.log('🔍 Updating attendance status:', { userId, userName, newStatus, attendanceId });
-
-      if (attendanceId) {
-        // Update existing attendance record
-        const updateData: any = { status: newStatus };
-        
-        // If changing to absent, remove check-in/check-out times
-        if (newStatus === 'absent') {
-          updateData.checkIn = null;
-          updateData.checkOut = null;
-          updateData.hoursWorked = 0;
-          updateData.overtime = 0;
-        } else if (newStatus === 'present' && !getTodayAttendance(userId)?.checkIn) {
-          // If changing to present and no check-in time, set current time
-          updateData.checkIn = new Date().toISOString();
-        }
-
-        const response = await apiService.updateAttendance(attendanceId, updateData);
-        
-        if (response.success) {
-          Alert.alert(t('success'), t('statusChangedTo', { name: userName, newStatus }));
-          await loadAttendance();
-        } else {
-          Alert.alert(t('error'), response.error || t('failedToUpdateAttendanceStatus'));
-        }
-      } else {
-        // Create new attendance record
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
-        const attendanceData: any = {
-          userId: userId,
-          date: today.toISOString(),
-          status: newStatus,
-        };
-
-        // Only add check-in time if marking as present
-        if (newStatus === 'present') {
-          attendanceData.checkIn = now.toISOString();
-        }
-
-        const response = await apiService.createAttendance(attendanceData);
-        
-        if (response.success) {
-          Alert.alert(t('success'), t('markedAs', { name: userName, status: newStatus }));
-          await loadAttendance();
-        } else {
-          Alert.alert(t('error'), response.error || t('failedToCreateAttendanceRecord'));
-        }
-      }
-    } catch (error) {
-      console.error('Error updating attendance status:', error);
-      Alert.alert(t('error'), t('failedToUpdateAttendanceStatus'));
-    }
-  };
-
-  const handleDeleteAttendance = async (attendanceId: string, userName: string) => {
-    if (user?.role !== 'admin') return;
-
-    Alert.alert(
-      t('deleteAttendanceRecord'),
-      t('deleteAttendanceConfirm', { name: userName }),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        {
-          text: t('delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await apiService.deleteAttendance(attendanceId);
-              if (response.success) {
-                Alert.alert(t('success'), t('attendanceRecordDeleted'));
-                await loadAttendance();
-              } else {
-                Alert.alert(t('error'), response.error || t('failedToDeleteAttendanceRecord'));
-              }
-            } catch (error) {
-              console.error('Error deleting attendance:', error);
-              Alert.alert(t('error'), t('failedToDeleteAttendanceRecord'));
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const formatTime = (dateString: string) => {
+  const formatTime = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
+  }, []);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleDateString();
-  };
+  }, []);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'present':
         return colors.success;
@@ -329,9 +214,9 @@ export const AttendanceScreen: React.FC = () => {
       default:
         return colors.secondary;
     }
-  };
+  }, [colors]);
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = useCallback((status: string) => {
     switch (status) {
       case 'present':
         return 'checkmark-circle';
@@ -342,317 +227,49 @@ export const AttendanceScreen: React.FC = () => {
       default:
         return 'help-circle';
     }
-  };
+  }, []);
 
   // Get today's attendance for a specific user
-  const getTodayAttendance = (userId: string) => {
+  const getTodayAttendance = useCallback((userId: string) => {
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
     
     const attendanceArray = Array.isArray(attendance) ? attendance : [];
     
-    console.log('🔍 Looking for today\'s attendance for user:', userId);
-    console.log('🔍 Today range:', { start: todayStart.toISOString(), end: todayEnd.toISOString() });
-    console.log('🔍 Available attendance records:', attendanceArray.map(r => ({
-      id: r._id,
-      userId: typeof r.userId === 'string' ? r.userId : r.userId?._id,
-      date: r.date,
-      status: r.status
-    })));
-    
-    const todayRecord = attendanceArray.find(record => {
-      if (!record.userId || !record.date) return false;
+    return attendanceArray.find(record => {
+      if (!record?.userId || !record?.date) return false;
       
-      // Handle both string and object userId
       const recordUserId = typeof record.userId === 'string' ? record.userId : record.userId._id || record.userId;
       const recordDate = new Date(record.date);
       
-      const isMatch = recordUserId === userId && recordDate >= todayStart && recordDate < todayEnd;
-      
-      console.log('🔍 Checking record:', {
-        recordUserId,
-        targetUserId: userId,
-        recordDate: recordDate.toISOString(),
-        isUserMatch: recordUserId === userId,
-        isDateMatch: recordDate >= todayStart && recordDate < todayEnd,
-        isMatch
-      });
-      
-      return isMatch;
+      return recordUserId === userId && recordDate >= todayStart && recordDate < todayEnd;
     });
-    
-    console.log('🔍 Found today\'s attendance:', todayRecord);
-    return todayRecord;
-  };
+  }, [attendance]);
 
-  // Worker View - Show only their attendance status
-  const WorkerView = () => {
-    const attendanceArray = Array.isArray(attendance) ? attendance : [];
-    const todayAttendance = getTodayAttendance(user?._id || '');
-
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-            {t('attendance')}
-          </Text>
-        </View>
-
-        {/* Today's Status Card */}
-        <ThemedCard style={styles.todayStatusCard}>
-          <View style={styles.todayStatusHeader}>
-            <Ionicons name="today" size={24} color={colors.primary} />
-            <Text style={[styles.todayStatusTitle, { color: colors.text }]}>
-              {t('todayStatus')}
-            </Text>
-          </View>
-          
-          {todayAttendance ? (
-            <View>
-              <View style={styles.statusContainer}>
-                <Ionicons
-                  name={getStatusIcon(todayAttendance.status) as any}
-                  size={20}
-                  color={getStatusColor(todayAttendance.status)}
-                />
-                <Text style={[styles.statusText, { color: getStatusColor(todayAttendance.status) }]}>
-                  {t(todayAttendance.status as any)}
-                </Text>
-              </View>
-              
-              {todayAttendance.checkIn && (
-                <Text style={[styles.timeText, { color: colors.text }]}>
-                  {t('checkedIn')}: {formatTime(todayAttendance.checkIn)}
-                </Text>
-              )}
-              
-              {todayAttendance.checkOut && (
-                <Text style={[styles.timeText, { color: colors.text }]}>
-                  {t('checkedOut')}: {formatTime(todayAttendance.checkOut)}
-                </Text>
-              )}
-              
-              {!todayAttendance.checkOut && todayAttendance.checkIn && (
-                <Text style={[styles.activeText, { color: colors.warning }]}>
-                  {t('currentlyCheckedIn')}
-                </Text>
-              )}
-            </View>
-          ) : (
-            <View style={styles.statusContainer}>
-              <Ionicons name="time" size={20} color={colors.secondary} />
-              <Text style={[styles.statusText, { color: colors.secondary }]}>
-                {t('notCheckedInToday')}
-              </Text>
-            </View>
-          )}
-        </ThemedCard>
-
-        {/* Recent Attendance History */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('recentHistory')}</Text>
-        
-        <ScrollView
-          style={styles.scrollView}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={[styles.loadingText, { color: colors.secondary }]}>
-                {t('loading')}
-              </Text>
-            </View>
-          ) : attendanceArray.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="calendar" size={64} color={colors.secondary} />
-              <Text style={[styles.emptyText, { color: colors.text }]}>
-                {t('noAttendanceRecords')}
-              </Text>
-            </View>
-          ) : (
-            attendanceArray.slice(0, 10).map((record) => (
-              <AttendanceCard key={record._id} record={record} />
-            ))
-          )}
-        </ScrollView>
-      </View>
-    );
-  };
-
-  // Admin View - Show all users and manage their attendance
-  const AdminView = () => {
-    const usersArray = Array.isArray(users) ? users : [];
-
-    const UserAttendanceCard: React.FC<{ user: User }> = ({ user: userItem }) => {
-      const todayAttendance = getTodayAttendance(userItem._id);
-      
-      console.log('🔍 UserAttendanceCard for:', userItem.name, 'todayAttendance:', todayAttendance);
-      
-      return (
-        <ThemedCard style={styles.userCard}>
-          <View style={styles.userHeader}>
-            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-              <Text style={styles.avatarText}>
-                {userItem.name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.userInfo}>
-              <Text style={[styles.userName, { color: colors.text }]}>
-                {userItem.name}
-              </Text>
-              <Text style={[styles.userPosition, { color: colors.secondary }]}>
-                {userItem.position || t('worker')}
-              </Text>
-            </View>
-            
-            <View style={styles.attendanceActions}>
-              {todayAttendance ? (
-                <View style={styles.attendanceStatus}>
-                  <TouchableOpacity
-                    style={styles.statusContainer}
-                    onPress={() => handleChangeAttendanceStatus(
-                      userItem._id,
-                      userItem.name,
-                      todayAttendance.status,
-                      todayAttendance._id
-                    )}
-                  >
-                    <Ionicons
-                      name={getStatusIcon(todayAttendance.status) as any}
-                      size={16}
-                      color={getStatusColor(todayAttendance.status)}
-                    />
-                    <Text style={[styles.statusText, { color: getStatusColor(todayAttendance.status) }]}>
-                      {t(todayAttendance.status as any)}
-                    </Text>
-                    <Ionicons name="chevron-down" size={12} color={colors.secondary} style={{ marginLeft: 4 }} />
-                  </TouchableOpacity>
-                  
-                  {todayAttendance.checkIn && (
-                    <Text style={[styles.timeText, { color: colors.secondary }]}>
-                      {t('in')}: {formatTime(todayAttendance.checkIn)}
-                    </Text>
-                  )}
-                  
-                  <View style={styles.actionButtonsRow}>
-                    {todayAttendance.checkOut ? (
-                      <Text style={[styles.timeText, { color: colors.secondary }]}>
-                        {t('out')}: {formatTime(todayAttendance.checkOut)}
-                      </Text>
-                    ) : todayAttendance.checkIn ? (
-                      <ThemedButton
-                        title={t('checkOut')}
-                        onPress={() => handleCheckOut(todayAttendance._id, userItem.name)}
-                        size="small"
-                        variant="outline"
-                        style={styles.actionButton}
-                      />
-                    ) : null}
-                    
-                    <TouchableOpacity
-                      style={[styles.deleteButton, { backgroundColor: colors.error }]}
-                      onPress={() => handleDeleteAttendance(todayAttendance._id, userItem.name)}
-                    >
-                      <Ionicons name="trash" size={12} color="#ffffff" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.noAttendanceActions}>
-                  <ThemedButton
-                    title={t('checkIn')}
-                    onPress={() => handleCheckIn(userItem._id, userItem.name)}
-                    size="small"
-                    style={styles.actionButton}
-                  />
-                  <ThemedButton
-                    title={t('markAbsent')}
-                    onPress={() => updateAttendanceStatus(userItem._id, userItem.name, 'absent')}
-                    size="small"
-                    variant="outline"
-                    style={[styles.actionButton, { marginTop: 4 }]}
-                  />
-                </View>
-              )}
-            </View>
-          </View>
-        </ThemedCard>
-      );
-    };
-
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-            {t('attendanceManagement')}
-          </Text>
-          <ThemedButton
-            title={t('markAbsent')}
-            onPress={handleMarkAbsentWorkers}
-            size="small"
-            variant="outline"
-            style={styles.markAbsentButton}
-          />
-        </View>
-
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('todayAttendance')}</Text>
-
-        <ScrollView
-          style={styles.scrollView}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={[styles.loadingText, { color: colors.secondary }]}>
-                {t('loading')}
-              </Text>
-            </View>
-          ) : usersArray.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="people" size={64} color={colors.secondary} />
-              <Text style={[styles.emptyText, { color: colors.text }]}>
-                {t('noWorkersFound')}
-              </Text>
-              <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
-                {t('addWorkersToManageAttendance')}
-              </Text>
-            </View>
-          ) : (
-            usersArray.map((userItem) => (
-              <UserAttendanceCard key={userItem._id} user={userItem} />
-            ))
-          )}
-        </ScrollView>
-      </View>
-    );
-  };
-
-  const AttendanceCard: React.FC<{ record: AttendanceRecord }> = ({ record }) => (
+  // Memoized components
+  const AttendanceCard = React.memo<{ record: AttendanceRecord }>(({ record }) => (
     <ThemedCard style={styles.attendanceCard}>
       <View style={styles.cardHeader}>
         <View style={styles.dateSection}>
           <Text style={[styles.date, { color: colors.text }]}>
-            {formatDate(record.date)}
+            {record?.date ? formatDate(record.date) : 'Unknown Date'}
           </Text>
           <View style={styles.statusContainer}>
             <Ionicons
-              name={getStatusIcon(record.status) as any}
+              name={getStatusIcon(record?.status || '') as any}
               size={16}
-              color={getStatusColor(record.status)}
+              color={getStatusColor(record?.status || '')}
             />
-            <Text style={[styles.status, { color: getStatusColor(record.status) }]}>
-              {t(record.status as any)}
+            <Text style={[styles.status, { color: getStatusColor(record?.status || '') }]}>
+              {record?.status ? t(record.status as any) : 'Unknown'}
             </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.timeSection}>
-        {record.checkIn && (
+        {record?.checkIn && (
           <View style={styles.timeItem}>
             <Text style={[styles.timeLabel, { color: colors.secondary }]}>
               {t('checkIn')}
@@ -663,7 +280,7 @@ export const AttendanceScreen: React.FC = () => {
           </View>
         )}
 
-        {record.checkOut && (
+        {record?.checkOut && (
           <View style={styles.timeItem}>
             <Text style={[styles.timeLabel, { color: colors.secondary }]}>
               {t('checkOut')}
@@ -675,34 +292,276 @@ export const AttendanceScreen: React.FC = () => {
         )}
       </View>
 
-      {record.hoursWorked > 0 && (
+      {(record?.hoursWorked || 0) > 0 && (
         <View style={styles.hoursSection}>
           <Text style={[styles.hoursLabel, { color: colors.secondary }]}>
             {t('hoursWorked')}: 
           </Text>
           <Text style={[styles.hoursValue, { color: colors.text }]}>
-            {record.hoursWorked.toFixed(1)}h
+            {(record.hoursWorked || 0).toFixed(1)}h
           </Text>
           
-          {record.overtime > 0 && (
+          {(record?.overtime || 0) > 0 && (
             <>
               <Text style={[styles.hoursLabel, { color: colors.secondary }]}>
                 {' • '}{t('overtime')}: 
               </Text>
               <Text style={[styles.overtimeValue, { color: colors.warning }]}>
-                {record.overtime.toFixed(1)}h
+                {(record.overtime || 0).toFixed(1)}h
               </Text>
             </>
           )}
         </View>
       )}
     </ThemedCard>
-  );
+  ));
 
-  // Render based on user role
+  const UserAttendanceCard = React.memo<{ user: User }>(({ user: userItem }) => {
+    const todayAttendance = getTodayAttendance(userItem._id);
+    
+    return (
+      <ThemedCard style={styles.userCard}>
+        <View style={styles.userHeader}>
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            <Text style={styles.avatarText}>
+              {(userItem?.name || 'U').charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={[styles.userName, { color: colors.text }]}>
+              {userItem?.name || 'Unknown User'}
+            </Text>
+            <Text style={[styles.userPosition, { color: colors.secondary }]}>
+              {userItem?.position || t('worker')}
+            </Text>
+          </View>
+          
+          <View style={styles.attendanceActions}>
+            {todayAttendance ? (
+              <View style={styles.attendanceStatus}>
+                <View style={styles.statusContainer}>
+                  <Ionicons
+                    name={getStatusIcon(todayAttendance.status) as any}
+                    size={16}
+                    color={getStatusColor(todayAttendance.status)}
+                  />
+                  <Text style={[styles.statusText, { color: getStatusColor(todayAttendance.status) }]}>
+                    {t(todayAttendance.status as any)}
+                  </Text>
+                </View>
+                
+                {todayAttendance.checkIn && (
+                  <Text style={[styles.timeText, { color: colors.secondary }]}>
+                    {t('in')}: {formatTime(todayAttendance.checkIn)}
+                  </Text>
+                )}
+                
+                <View style={styles.actionButtonsRow}>
+                  {todayAttendance.checkOut ? (
+                    <Text style={[styles.timeText, { color: colors.secondary }]}>
+                      {t('out')}: {formatTime(todayAttendance.checkOut)}
+                    </Text>
+                  ) : todayAttendance.checkIn ? (
+                    <ThemedButton
+                      title={t('checkOut')}
+                      onPress={() => handleCheckOut(todayAttendance._id, userItem?.name)}
+                      size="small"
+                      variant="outline"
+                      style={styles.actionButton}
+                    />
+                  ) : null}
+                </View>
+              </View>
+            ) : (
+              <View style={styles.noAttendanceActions}>
+                <ThemedButton
+                  title={t('checkIn')}
+                  onPress={() => handleCheckIn(userItem._id, userItem?.name || 'User')}
+                  size="small"
+                  style={styles.actionButton}
+                />
+              </View>
+            )}
+          </View>
+        </View>
+      </ThemedCard>
+    );
+  });
+
+  if (user?.role === 'admin') {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
+            {t('attendanceManagement')}
+          </Text>
+        </View>
+
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            placeholder={`${t('search')} workers...`}
+          />
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('todayAttendance')}</Text>
+
+        <ScrollView
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="none"
+        >
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={[styles.loadingText, { color: colors.secondary }]}>
+                {t('loading')}
+              </Text>
+            </View>
+          ) : filteredUsers.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="people" size={64} color={colors.secondary} />
+              <Text style={[styles.emptyText, { color: colors.text }]}>
+                {searchQuery ? `No workers found for "${searchQuery}"` : t('noWorkersFound')}
+              </Text>
+              <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
+                {searchQuery ? 'Try a different search term' : t('addWorkersToManageAttendance')}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {searchQuery && (
+                <View style={styles.searchResults}>
+                  <Text style={[styles.searchResultsText, { color: colors.secondary }]}>
+                    {filteredUsers.length} {filteredUsers.length === 1 ? 'worker' : 'workers'} found
+                  </Text>
+                </View>
+              )}
+              {filteredUsers.map((userItem) => (
+                <UserAttendanceCard key={userItem._id} user={userItem} />
+              ))}
+            </>
+          )}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Worker View
+  const attendanceArray = Array.isArray(filteredAttendance) ? filteredAttendance : [];
+  const todayAttendance = getTodayAttendance(user?._id || '');
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {user?.role === 'admin' ? <AdminView /> : <WorkerView />}
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
+          {t('attendance')}
+        </Text>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+          placeholder={`${t('search')} ${t('attendance').toLowerCase()}...`}
+        />
+      </View>
+
+      {/* Today's Status Card */}
+      <ThemedCard style={styles.todayStatusCard}>
+        <View style={styles.todayStatusHeader}>
+          <Ionicons name="today" size={24} color={colors.primary} />
+          <Text style={[styles.todayStatusTitle, { color: colors.text }]}>
+            {t('todayStatus')}
+          </Text>
+        </View>
+        
+        {todayAttendance ? (
+          <View>
+            <View style={styles.statusContainer}>
+              <Ionicons
+                name={getStatusIcon(todayAttendance.status) as any}
+                size={20}
+                color={getStatusColor(todayAttendance.status)}
+              />
+              <Text style={[styles.statusText, { color: getStatusColor(todayAttendance.status) }]}>
+                {t(todayAttendance.status as any)}
+              </Text>
+            </View>
+            
+            {todayAttendance.checkIn && (
+              <Text style={[styles.timeText, { color: colors.text }]}>
+                {t('checkedIn')}: {formatTime(todayAttendance.checkIn)}
+              </Text>
+            )}
+            
+            {todayAttendance.checkOut && (
+              <Text style={[styles.timeText, { color: colors.text }]}>
+                {t('checkedOut')}: {formatTime(todayAttendance.checkOut)}
+              </Text>
+            )}
+            
+            {!todayAttendance.checkOut && todayAttendance.checkIn && (
+              <Text style={[styles.activeText, { color: colors.warning }]}>
+                {t('currentlyCheckedIn')}
+              </Text>
+            )}
+          </View>
+        ) : (
+          <View style={styles.statusContainer}>
+            <Ionicons name="time" size={20} color={colors.secondary} />
+            <Text style={[styles.statusText, { color: colors.secondary }]}>
+              {t('notCheckedInToday')}
+            </Text>
+          </View>
+        )}
+      </ThemedCard>
+
+      {/* Recent Attendance History */}
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('recentHistory')}</Text>
+      
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
+      >
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={[styles.loadingText, { color: colors.secondary }]}>
+              {t('loading')}
+            </Text>
+          </View>
+        ) : attendanceArray.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="calendar" size={64} color={colors.secondary} />
+            <Text style={[styles.emptyText, { color: colors.text }]}>
+              {searchQuery ? `No attendance records found for "${searchQuery}"` : t('noAttendanceRecords')}
+            </Text>
+            <Text style={[styles.emptySubtext, { color: colors.secondary }]}>
+              {searchQuery ? 'Try a different search term' : 'Check your attendance in the Attendance tab'}
+            </Text>
+          </View>
+        ) : (
+          <>
+            {searchQuery && (
+              <View style={styles.searchResults}>
+                <Text style={[styles.searchResultsText, { color: colors.secondary }]}>
+                  {attendanceArray.length} {attendanceArray.length === 1 ? 'record' : 'records'} found
+                </Text>
+              </View>
+            )}
+            {attendanceArray.slice(0, 10).map((record) => (
+              <AttendanceCard key={record._id} record={record} />
+            ))}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 };
@@ -723,8 +582,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     flex: 1,
   },
-  markAbsentButton: {
-    paddingHorizontal: 12,
+  searchContainer: {
+    paddingHorizontal: 20,
+  },
+  searchResults: {
+    paddingHorizontal: 4,
+    marginBottom: 12,
+  },
+  searchResultsText: {
+    fontSize: 14,
+    fontStyle: 'italic',
   },
   sectionTitle: {
     fontSize: 18,
@@ -818,13 +685,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  deleteButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   attendanceCard: {
     marginBottom: 12,
