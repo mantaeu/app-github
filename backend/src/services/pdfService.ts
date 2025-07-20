@@ -329,12 +329,14 @@ export class PDFService {
 
         currentY += 15;
 
-        // Amount Section (moved here, smaller size)
-        doc.rect(leftMargin, currentY, pageWidth, 35).fill('#FF6600');
+        // Amount Section (moved to right side, smaller size)
+        const amountBoxWidth = 200;
+        const amountBoxX = leftMargin + pageWidth - amountBoxWidth;
+        doc.rect(amountBoxX, currentY, amountBoxWidth, 35).fill('#FF6600');
         doc.fontSize(12).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text('TOTAL AMOUNT:', leftMargin + 15, currentY + 6);
+        doc.text('TOTAL AMOUNT:', amountBoxX + 15, currentY + 6);
         doc.fontSize(18);
-        doc.text(`${(receipt.amount || 0).toFixed(2)} DH`, leftMargin + 15, currentY + 18);
+        doc.text(`${(receipt.amount || 0).toFixed(2)} DH`, amountBoxX + 15, currentY + 18);
         currentY += 50;
 
         // Description Section
