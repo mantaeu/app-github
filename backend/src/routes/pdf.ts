@@ -37,8 +37,8 @@ router.get('/salary-slip/:salaryId', authenticate, async (req: AuthRequest, res,
       });
     }
 
-    // Generate PDF
-    const pdfBuffer = await PDFService.generateIndividualSalarySlipPDF(salaryId, language);
+    // Generate PDF (note: language parameter is not used in current implementation)
+    const pdfBuffer = await PDFService.generateIndividualSalarySlipPDF(salaryId);
     console.log(`✅ PDF generated successfully, size: ${pdfBuffer.length} bytes`);
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -79,8 +79,8 @@ router.get('/receipt/:receiptId', authenticate, async (req: AuthRequest, res, ne
       });
     }
 
-    // Generate PDF
-    const pdfBuffer = await PDFService.generateIndividualReceiptPDF(receiptId, language);
+    // Generate PDF (note: language parameter is not used in current implementation)
+    const pdfBuffer = await PDFService.generateIndividualReceiptPDF(receiptId);
     console.log(`✅ PDF generated successfully, size: ${pdfBuffer.length} bytes`);
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -113,8 +113,8 @@ router.get('/all-salaries', authenticate, authorize('admin'), async (req: AuthRe
       });
     }
 
-    // Generate PDF
-    const pdfBuffer = await PDFService.generateAllSalariesPDF(language);
+    // Generate PDF (note: language parameter is not used in current implementation)
+    const pdfBuffer = await PDFService.generateAllSalariesPDF();
     console.log(`✅ All salaries PDF generated successfully, size: ${pdfBuffer.length} bytes`);
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -147,8 +147,8 @@ router.get('/all-receipts', authenticate, authorize('admin'), async (req: AuthRe
       });
     }
 
-    // Generate PDF
-    const pdfBuffer = await PDFService.generateAllReceiptsPDF(language);
+    // Generate PDF (note: language parameter is not used in current implementation)
+    const pdfBuffer = await PDFService.generateAllReceiptsPDF();
     console.log(`✅ All receipts PDF generated successfully, size: ${pdfBuffer.length} bytes`);
 
     res.setHeader('Content-Type', 'application/pdf');
