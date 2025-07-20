@@ -2,6 +2,7 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { Salary } from '../models/Salary';
 import { Receipt } from '../models/Receipt';
+import { User } from '../models/User';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
 import { AttendanceService } from '../services/attendanceService';
 
@@ -248,7 +249,7 @@ router.post('/generate-monthly/:month/:year', authenticate, authorize('admin'), 
 });
 
 // @route   POST /api/salary/checkout/:userId/:month/:year
-// @desc    Monthly salary checkout - Generate detailed receipt
+// @desc    Daily salary checkout - Generate detailed receipt (works even for 1 day)
 // @access  Private
 router.post('/checkout/:userId/:month/:year', authenticate, async (req: AuthRequest, res, next) => {
   try {
@@ -262,62 +263,82 @@ router.post('/checkout/:userId/:month/:year', authenticate, async (req: AuthRequ
       });
     }
 
+    // Get the user's actual daily rate from their profile
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const dailyRate = user.salary || 0; // This is the actual daily rate (e.g., 100 DH)
+
     // Get or create salary record
     let salaryRecord = await Salary.findOne({ userId, month, year: parseInt(year) });
     
     if (!salaryRecord) {
-      // Generate salary record based on attendance
-      const salaryData = await AttendanceService.calculateMonthlySalary(userId, month, parseInt(year));
+      // Generate salary record based on daily attendance
+      const salaryData = await AttendanceService.calculateDailySalary(userId, month, parseInt(year));
+      
+      // Ensure minimum values to prevent validation errors
+      const presentDays = Math.max(0, salaryData.presentDays || 0);
+      const earnedSalary = Math.max(0, salaryData.earnedSalary || 0);
+      const totalSalary = Math.max(0, salaryData.totalSalary || 0);
       
       salaryRecord = new Salary({
         userId,
         month,
         year: parseInt(year),
-        baseSalary: salaryData.actualBaseSalary,
-        overtime: salaryData.overtime,
-        bonuses: salaryData.bonuses,
-        deductions: salaryData.deductions,
-        totalSalary: salaryData.totalSalary,
-        presentDays: salaryData.presentDays,
-        absentDays: salaryData.absentDays,
-        totalWorkingDays: salaryData.totalWorkingDays,
-        totalHoursWorked: salaryData.totalHoursWorked,
+        baseSalary: earnedSalary,
+        overtime: 0, // No overtime in daily system
+        bonuses: Math.max(0, salaryData.bonuses || 0),
+        deductions: Math.max(0, salaryData.missedSalary || 0),
+        totalSalary: totalSalary,
+        presentDays: presentDays,
+        absentDays: Math.max(0, salaryData.absentDays || 0),
+        totalWorkingDays: Math.max(0, salaryData.totalWorkingDays || 0),
+        totalHoursWorked: 0, // Not relevant for daily system
         isPaid: false
       });
       
       await salaryRecord.save();
     }
 
-    // Create detailed receipt
-    const receiptDescription = `Monthly Salary - ${month} ${year}
-Working Days: ${salaryRecord.presentDays}/${salaryRecord.totalWorkingDays}
-Absent Days: ${salaryRecord.absentDays}
-Total Hours: ${salaryRecord.totalHoursWorked}h
-Base Salary: ${salaryRecord.baseSalary}
-Overtime: ${salaryRecord.overtime}
-Bonuses: ${salaryRecord.bonuses}
-Deductions: ${salaryRecord.deductions}
-Total: ${salaryRecord.totalSalary}`;
+    // Create detailed receipt for daily-based salary
+    const receiptDescription = `Daily Salary Checkout - ${month} ${year}
+Worker: ${user.name}
+Daily Rate: ${dailyRate} DH per day
+Working Days: ${salaryRecord.presentDays || 0}/${salaryRecord.totalWorkingDays || 0}
+Absent Days: ${salaryRecord.absentDays || 0}
+Calculation: ${salaryRecord.presentDays || 0} days × ${dailyRate} DH = ${salaryRecord.baseSalary || 0} DH
+Missed Salary: ${salaryRecord.deductions || 0} DH
+Total Paid: ${salaryRecord.totalSalary || 0} DH`;
+
+    // Ensure receipt amount is never negative or invalid
+    const receiptAmount = Math.max(0, salaryRecord.totalSalary || 0);
 
     const receipt = new Receipt({
       userId,
       type: 'salary',
-      amount: salaryRecord.totalSalary,
+      amount: receiptAmount,
       description: receiptDescription,
       date: new Date(),
       metadata: {
         salaryRecordId: salaryRecord._id,
         month,
         year: parseInt(year),
-        presentDays: salaryRecord.presentDays,
-        absentDays: salaryRecord.absentDays,
-        totalWorkingDays: salaryRecord.totalWorkingDays,
-        totalHoursWorked: salaryRecord.totalHoursWorked,
+        presentDays: salaryRecord.presentDays || 0,
+        absentDays: salaryRecord.absentDays || 0,
+        totalWorkingDays: salaryRecord.totalWorkingDays || 0,
+        totalHoursWorked: salaryRecord.totalHoursWorked || 0,
+        dailyRate: dailyRate,
+        workerName: user.name,
         breakdown: {
-          baseSalary: salaryRecord.baseSalary,
-          overtime: salaryRecord.overtime,
-          bonuses: salaryRecord.bonuses,
-          deductions: salaryRecord.deductions
+          baseSalary: salaryRecord.baseSalary || 0,
+          overtime: salaryRecord.overtime || 0,
+          bonuses: salaryRecord.bonuses || 0,
+          deductions: salaryRecord.deductions || 0
         }
       }
     });
@@ -331,7 +352,7 @@ Total: ${salaryRecord.totalSalary}`;
         salaryRecord,
         receipt
       },
-      message: 'Monthly salary checkout completed successfully',
+      message: `Daily salary checkout completed: ${salaryRecord.presentDays || 0} days × ${dailyRate} DH = ${salaryRecord.totalSalary || 0} DH`,
     });
   } catch (error) {
     next(error);

@@ -34,7 +34,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
     role: 'worker' as 'worker' | 'admin',
     position: '',
     salary: '',
-    hourlyRate: '',
     phone: '',
     address: '',
   });
@@ -52,7 +51,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           role: editingUser.role || 'worker',
           position: editingUser.position || '',
           salary: editingUser.salary?.toString() || '',
-          hourlyRate: editingUser.hourlyRate?.toString() || '',
           phone: editingUser.phone || '',
           address: editingUser.address || '',
         });
@@ -63,7 +61,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           role: 'worker',
           position: '',
           salary: '',
-          hourlyRate: '',
           phone: '',
           address: '',
         });
@@ -84,7 +81,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
         role: formData.role,
         position: formData.position.trim() || undefined,
         salary: formData.salary ? parseFloat(formData.salary) : undefined,
-        hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
         phone: formData.phone.trim() || undefined,
         address: formData.address.trim() || undefined,
       };
@@ -283,7 +279,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
           <View style={styles.formGroup}>
             <Text style={[styles.label, { color: colors.text }]}>
-              {t('monthlySalary')}
+              Daily Rate (DH)
             </Text>
             <TextInput
               style={[
@@ -296,33 +292,14 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               ]}
               value={formData.salary}
               onChangeText={(text) => setFormData(prev => ({ ...prev, salary: text }))}
-              placeholder={t('enterMonthlySalary')}
+              placeholder="Enter daily rate (e.g., 50)"
               placeholderTextColor={colors.secondary}
               keyboardType="numeric"
               returnKeyType="next"
             />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>
-              {t('hourlyRate')}
+            <Text style={[styles.helpText, { color: colors.secondary }]}>
+              Amount paid per working day (e.g., 50 DH per day)
             </Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.card,
-                  color: colors.text,
-                  borderColor: colors.border,
-                },
-              ]}
-              value={formData.hourlyRate}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, hourlyRate: text }))}
-              placeholder={t('enterHourlyRate')}
-              placeholderTextColor={colors.secondary}
-              keyboardType="numeric"
-              returnKeyType="next"
-            />
           </View>
 
           <View style={styles.formGroup}>

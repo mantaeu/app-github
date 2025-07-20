@@ -63,21 +63,19 @@ export const ProfileScreen: React.FC = () => {
       </View>
     );
 
-    const formatCurrency = (amount: number) => `${amount.toLocaleString()} DH`;
-
     return (
       <ThemedCard style={styles.quickStatsCard}>
         <Text style={[styles.cardTitle, { color: colors.text }]}>{t('quickOverview')}</Text>
         <View style={styles.statsContainer}>
           <StatItem
-            label={t('baseSalary')}
-            value={formatCurrency(user?.salary || 0)}
+            label="Daily Rate"
+            value={`${user?.salary || 0} DH/day`}
             icon="card-outline"
             color="#10B981"
           />
           <StatItem
-            label={t('hourlyRate')}
-            value={`${user?.hourlyRate || 0} DH/hr`}
+            label="Worker Type"
+            value="Daily Worker"
             icon="time-outline"
             color="#3B82F6"
           />
@@ -225,24 +223,30 @@ export const ProfileScreen: React.FC = () => {
       </View>
     );
 
-    const formatCurrency = (amount: number) => `${amount.toLocaleString()} DH`;
-
     return (
       <ThemedCard style={styles.compensationCard}>
-        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('compensationDetails')}</Text>
+        <Text style={[styles.cardTitle, { color: colors.text }]}>Daily Rate Details</Text>
         <View style={styles.compensationContainer}>
           <CompensationItem
-            label={t('monthlySalary')}
-            value={formatCurrency(user?.salary || 0)}
+            label="Daily Rate"
+            value={`${user?.salary || 0} DH per day`}
             icon="card-outline"
             color="#10B981"
           />
           <CompensationItem
-            label={t('hourlyRate')}
-            value={`${user?.hourlyRate || 0} DH ${t('perHour')}`}
+            label="Payment Method"
+            value="Daily Attendance Based"
             icon="time-outline"
             color="#3B82F6"
           />
+        </View>
+        <View style={styles.compensationNote}>
+          <View style={[styles.noteIcon, { backgroundColor: colors.primary + '15' }]}>
+            <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+          </View>
+          <Text style={[styles.noteText, { color: colors.secondary }]}>
+            You get paid {user?.salary || 0} DH for each day you attend work. No payment for missed days.
+          </Text>
         </View>
       </ThemedCard>
     );
@@ -479,6 +483,7 @@ const styles = StyleSheet.create({
   },
   compensationContainer: {
     gap: 16,
+    marginBottom: 20,
   },
   compensationItem: {
     flexDirection: 'row',
@@ -505,6 +510,27 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: -0.3,
+  },
+  compensationNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F3F4F6',
+    padding: 16,
+    borderRadius: 12,
+  },
+  noteIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    marginTop: 2,
+  },
+  noteText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
   },
 
   bottomPadding: {

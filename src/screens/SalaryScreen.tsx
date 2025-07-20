@@ -135,8 +135,8 @@ export const SalaryScreen: React.FC = () => {
     const currentYear = currentDate.getFullYear();
 
     Alert.alert(
-      t('generateMonthlySalaries'),
-      `${t('generateSalaryRecordsFor')} ${currentMonth} ${currentYear}?`,
+      'Generate Daily Salaries',
+      `Generate daily salary records for ${currentMonth} ${currentYear}?`,
       [
         { text: t('cancel'), style: 'cancel' },
         {
@@ -145,14 +145,14 @@ export const SalaryScreen: React.FC = () => {
             try {
               const response = await apiService.generateMonthlySalaries(currentMonth, currentYear);
               if (response.success) {
-                Alert.alert(t('success'), t('monthlySalaryRecordsGenerated'));
+                Alert.alert(t('success'), 'Daily salary records generated successfully');
                 loadSalaryRecords();
               } else {
-                Alert.alert(t('error'), response.error || t('failedToGenerateMonthlySalaries'));
+                Alert.alert(t('error'), response.error || 'Failed to generate daily salary records');
               }
             } catch (error) {
-              console.error('Error generating monthly salaries:', error);
-              Alert.alert(t('error'), t('failedToGenerateMonthlySalaries'));
+              console.error('Error generating daily salaries:', error);
+              Alert.alert(t('error'), 'Failed to generate daily salary records');
             }
           },
         },
@@ -165,8 +165,8 @@ export const SalaryScreen: React.FC = () => {
     if (!userId) return;
 
     Alert.alert(
-      t('monthlyCheckout'),
-      `${t('checkoutSalaryFor')} ${record.month} ${record.year}?`,
+      'Daily Salary Checkout',
+      `Checkout daily salary for ${record.month} ${record.year}?`,
       [
         { text: t('cancel'), style: 'cancel' },
         {
@@ -181,7 +181,7 @@ export const SalaryScreen: React.FC = () => {
               if (response.success) {
                 Alert.alert(
                   t('success'),
-                  t('monthlyCheckoutCompleted'),
+                  'Daily salary checkout completed successfully',
                   [
                     {
                       text: t('viewReceipt'),
@@ -195,11 +195,11 @@ export const SalaryScreen: React.FC = () => {
                 );
                 loadSalaryRecords();
               } else {
-                Alert.alert(t('error'), response.error || t('failedToCompleteMonthlycheckout'));
+                Alert.alert(t('error'), response.error || 'Failed to complete daily salary checkout');
               }
             } catch (error) {
-              console.error('Error during monthly checkout:', error);
-              Alert.alert(t('error'), t('failedToCompleteMonthlycheckout'));
+              console.error('Error during daily salary checkout:', error);
+              Alert.alert(t('error'), 'Failed to complete daily salary checkout');
             }
           },
         },
@@ -257,20 +257,47 @@ export const SalaryScreen: React.FC = () => {
         <View style={styles.salaryBreakdown}>
           <View style={styles.salaryRow}>
             <Text style={[styles.salaryLabel, { color: colors.secondary }]}>
-              {t('baseSalary')}:
+              Present Days:
             </Text>
             <Text style={[styles.salaryValue, { color: colors.text }]}>
+              {record.presentDays || 0}/{record.totalWorkingDays || 0}
+            </Text>
+          </View>
+
+          <View style={styles.salaryRow}>
+            <Text style={[styles.salaryLabel, { color: colors.secondary }]}>
+              Absent Days:
+            </Text>
+            <Text style={[styles.salaryValue, { color: colors.error }]}>
+              {record.absentDays || 0}
+            </Text>
+          </View>
+
+          <View style={styles.salaryRow}>
+            <Text style={[styles.salaryLabel, { color: colors.secondary }]}>
+              Daily Rate:
+            </Text>
+            <Text style={[styles.salaryValue, { color: colors.text }]}>
+              {record.presentDays ? formatCurrency(record.baseSalary / record.presentDays) : '0 DH'}/day
+            </Text>
+          </View>
+
+          <View style={styles.salaryRow}>
+            <Text style={[styles.salaryLabel, { color: colors.secondary }]}>
+              Earned Salary:
+            </Text>
+            <Text style={[styles.salaryValue, { color: colors.success }]}>
               {formatCurrency(record.baseSalary)}
             </Text>
           </View>
 
-          {record.overtime > 0 && (
+          {record.deductions > 0 && (
             <View style={styles.salaryRow}>
               <Text style={[styles.salaryLabel, { color: colors.secondary }]}>
-                {t('overtime')}:
+                Missed Salary:
               </Text>
-              <Text style={[styles.salaryValue, { color: colors.success }]}>
-                +{formatCurrency(record.overtime)}
+              <Text style={[styles.salaryValue, { color: colors.error }]}>
+                -{formatCurrency(record.deductions)}
               </Text>
             </View>
           )}
@@ -286,20 +313,9 @@ export const SalaryScreen: React.FC = () => {
             </View>
           )}
 
-          {record.deductions > 0 && (
-            <View style={styles.salaryRow}>
-              <Text style={[styles.salaryLabel, { color: colors.secondary }]}>
-                {t('deductions')}:
-              </Text>
-              <Text style={[styles.salaryValue, { color: colors.error }]}>
-                -{formatCurrency(record.deductions)}
-              </Text>
-            </View>
-          )}
-
           <View style={[styles.salaryRow, styles.totalRow]}>
             <Text style={[styles.totalLabel, { color: colors.text }]}>
-              {t('totalSalary')}:
+              Total Paid:
             </Text>
             <Text style={[styles.totalValue, { color: colors.primary }]}>
               {formatCurrency(record.totalSalary)}
@@ -320,7 +336,7 @@ export const SalaryScreen: React.FC = () => {
           
           {user?.role === 'worker' && !record.isPaid && (
             <ThemedButton
-              title={t('monthlyCheckout')}
+              title="Daily Checkout"
               onPress={() => handleMonthlyCheckout(record)}
               size="small"
               style={styles.actionButton}
@@ -347,7 +363,7 @@ export const SalaryScreen: React.FC = () => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text, textAlign: isRTL ? 'right' : 'left' }]}>
-          {t('salary')}
+          Daily Salary
         </Text>
         
         {user?.role === 'admin' && (
@@ -365,7 +381,7 @@ export const SalaryScreen: React.FC = () => {
               disabled={exporting}
             />
             <ThemedButton
-              title={t('generateMonthly')}
+              title="Generate Daily"
               onPress={handleGenerateMonthly}
               size="small"
               style={styles.generateButton}
@@ -379,7 +395,7 @@ export const SalaryScreen: React.FC = () => {
           <View style={styles.summaryHeader}>
             <Ionicons name="card" size={24} color={colors.primary} />
             <Text style={[styles.summaryTitle, { color: colors.text }]}>
-              {t('pendingSalaries')}
+              Pending Daily Salaries
             </Text>
           </View>
           <Text style={[styles.summaryAmount, { color: colors.primary }]}>

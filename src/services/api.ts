@@ -324,14 +324,6 @@ class ApiService {
     const filename = `all-receipts-${new Date().toISOString().split('T')[0]}-${language}.pdf`;
     await this.downloadPDF(blob, filename);
   }
-
-  // Checkout user salary
-  async checkoutUser(userId: string, data: { month: string; year: number }): Promise<ApiResponse<{
-    salaryRecord: any;
-    receipt: any;
-  }>> {
-    return this.checkoutMonthlySalary(userId, data.month, data.year);
-  }
 }
 
 export const apiService = new ApiService();

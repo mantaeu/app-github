@@ -82,6 +82,53 @@ export const UsersScreen: React.FC = () => {
     );
   };
 
+  const handleCheckout = (userId: string, userName: string) => {
+    const currentDate = new Date();
+    const currentMonth = currentDate.toLocaleString('en-US', { month: 'long' });
+    const currentYear = currentDate.getFullYear();
+
+    Alert.alert(
+      'Checkout Salary',
+      `Process salary checkout for ${userName} for ${currentMonth} ${currentYear}?`,
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: 'Checkout',
+          style: 'default',
+          onPress: () => processCheckout(userId, userName, currentMonth, currentYear),
+        },
+      ]
+    );
+  };
+
+  const processCheckout = async (userId: string, userName: string, month: string, year: number) => {
+    try {
+      setLoading(true);
+      const response = await apiService.checkoutMonthlySalary(userId, month, year);
+      
+      if (response.success) {
+        Alert.alert(
+          'Success',
+          `Salary checkout completed for ${userName}. Receipt has been generated and saved.`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          response.error || 'Failed to process checkout'
+        );
+      }
+    } catch (error) {
+      console.error('Error processing checkout:', error);
+      Alert.alert(
+        'Error',
+        'An error occurred while processing the checkout'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const deleteUser = async (userId: string) => {
     try {
       const response = await apiService.deleteUser(userId);
@@ -116,44 +163,6 @@ export const UsersScreen: React.FC = () => {
     loadUsers(); // Reload users after save
   }, []);
 
-  const handleCheckout = (userId: string, userName: string) => {
-    Alert.alert(
-      'Checkout User',
-      `Process salary payment for ${userName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Checkout',
-          style: 'default',
-          onPress: () => checkoutUser(userId, userName),
-        },
-      ]
-    );
-  };
-
-  const checkoutUser = async (userId: string, userName: string) => {
-    try {
-      const currentDate = new Date();
-      const month = currentDate.toLocaleString('default', { month: 'long' });
-      const year = currentDate.getFullYear();
-
-      const response = await apiService.checkoutUser(userId, { month, year });
-      
-      if (response.success) {
-        Alert.alert(
-          'Success',
-          `Salary checkout completed for ${userName}. Receipt has been generated.`
-        );
-        loadUsers(); // Refresh the users list
-      } else {
-        Alert.alert('Error', response.message || 'Failed to checkout user');
-      }
-    } catch (error) {
-      console.error('Error checking out user:', error);
-      Alert.alert('Error', 'Failed to process checkout');
-    }
-  };
-
   const UserCard: React.FC<{ user: User }> = React.memo(({ user }) => (
     <ThemedCard style={styles.userCard}>
       <View style={styles.userHeader}>
@@ -183,7 +192,7 @@ export const UsersScreen: React.FC = () => {
 
       {user.salary && (
         <Text style={[styles.userSalary, { color: colors.text }]}>
-          {t('salary')}: {user.salary} DH
+          Daily Rate: {user.salary} DH/day
         </Text>
       )}
 
@@ -196,13 +205,15 @@ export const UsersScreen: React.FC = () => {
           <Text style={styles.actionButtonText}>{t('edit')}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: '#28a745' }]}
-          onPress={() => handleCheckout(user._id, user.name)}
-        >
-          <Ionicons name="cash" size={16} color="#ffffff" />
-          <Text style={styles.actionButtonText}>Checkout</Text>
-        </TouchableOpacity>
+        {user.role === 'worker' && (
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: '#28a745' }]}
+            onPress={() => handleCheckout(user._id, user.name)}
+          >
+            <Ionicons name="card" size={16} color="#ffffff" />
+            <Text style={styles.actionButtonText}>Checkout</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.error }]}
@@ -351,7 +362,8 @@ const styles = StyleSheet.create({
   },
   userActions: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   actionButton: {
     flexDirection: 'row',
@@ -359,12 +371,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
-    flex: 0.3,
+    flex: 1,
     justifyContent: 'center',
   },
   actionButtonText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
   },

@@ -125,6 +125,15 @@ router.post('/', [
     await attendance.save();
     await attendance.populate('userId', 'name email');
 
+    // Update daily earnings when attendance is recorded
+    try {
+      await AttendanceService.updateDailyEarnings(userId, new Date(date), status || 'present');
+      console.log(`💰 Daily earnings updated for user ${userId} on ${date}`);
+    } catch (error) {
+      console.error('Error updating daily earnings:', error);
+      // Don't fail the attendance creation if earnings update fails
+    }
+
     res.status(201).json({
       success: true,
       data: attendance,
@@ -180,6 +189,20 @@ router.put('/:id', [
       { new: true, runValidators: true }
     ).populate('userId', 'name email');
 
+    // Update daily earnings when attendance status is changed
+    if (updateData.status) {
+      try {
+        await AttendanceService.updateDailyEarnings(
+          attendance.userId.toString(), 
+          attendance.date, 
+          updateData.status
+        );
+        console.log(`💰 Daily earnings updated for status change: ${updateData.status}`);
+      } catch (error) {
+        console.error('Error updating daily earnings on status change:', error);
+      }
+    }
+
     res.json({
       success: true,
       data: updatedAttendance,
@@ -194,7 +217,7 @@ router.put('/:id', [
 // @access  Private/Admin
 router.delete('/:id', authenticate, authorize('admin'), async (req: AuthRequest, res, next) => {
   try {
-    const attendance = await Attendance.findByIdAndDelete(req.params.id);
+    const attendance = await Attendance.findById(req.params.id);
 
     if (!attendance) {
       return res.status(404).json({
@@ -202,6 +225,20 @@ router.delete('/:id', authenticate, authorize('admin'), async (req: AuthRequest,
         message: 'Attendance record not found',
       });
     }
+
+    // Update daily earnings before deleting (recalculate without this day)
+    try {
+      await AttendanceService.updateDailyEarnings(
+        attendance.userId.toString(), 
+        attendance.date, 
+        'deleted'
+      );
+      console.log(`💰 Daily earnings updated after deleting attendance record`);
+    } catch (error) {
+      console.error('Error updating daily earnings on delete:', error);
+    }
+
+    await Attendance.findByIdAndDelete(req.params.id);
 
     res.json({
       success: true,
@@ -242,7 +279,7 @@ router.get('/monthly-report/:userId/:month/:year', authenticate, async (req: Aut
       });
     }
 
-    const salaryData = await AttendanceService.calculateMonthlySalary(userId, month, parseInt(year));
+    const salaryData = await AttendanceService.calculateDailySalary(userId, month, parseInt(year));
     
     res.json({
       success: true,

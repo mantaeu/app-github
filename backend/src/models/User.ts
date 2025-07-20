@@ -8,8 +8,8 @@ export interface IUser extends Document {
   phone?: string;
   address?: string;
   position?: string;
-  salary?: number;
-  hourlyRate?: number;
+  salary?: number; // Daily rate (e.g., 50 DH per day)
+  hourlyRate?: number; // Not used in daily system
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

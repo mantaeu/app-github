@@ -103,9 +103,10 @@ const salarySchema = new Schema<ISalary>({
 // Create compound index for user, month, and year
 salarySchema.index({ userId: 1, month: 1, year: 1 }, { unique: true });
 
-// Calculate total salary before saving
+// Calculate total salary before saving - ensure it's never negative
 salarySchema.pre('save', function (next) {
-  this.totalSalary = this.baseSalary + this.overtime + this.bonuses - this.deductions;
+  // Ensure totalSalary is never negative (minimum 0)
+  this.totalSalary = Math.max(0, this.baseSalary + this.overtime + this.bonuses - this.deductions);
   next();
 });
 
