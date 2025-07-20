@@ -163,7 +163,7 @@ export const ReceiptsScreen: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return `$${amount.toLocaleString()}`;
+    return `${amount.toLocaleString()} DH`;
   };
 
   const formatDate = (dateString: string) => {

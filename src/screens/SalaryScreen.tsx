@@ -195,7 +195,7 @@ export const SalaryScreen: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return `$${amount.toLocaleString()}`;
+    return `${amount.toLocaleString()} DH`;
   };
 
   const SalaryCard: React.FC<{ record: SalaryRecord }> = ({ record }) => {

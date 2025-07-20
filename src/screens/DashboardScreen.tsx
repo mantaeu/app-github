@@ -571,7 +571,7 @@ export const DashboardScreen: React.FC = () => {
       </ThemedCard>
     );
 
-    const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
+    const formatCurrency = (amount: number) => `${amount.toLocaleString()} DH`;
 
     return (
       <ScrollView

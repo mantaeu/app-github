@@ -62,74 +62,12 @@ export class PDFService {
     }
   }
 
-  // Helper method to draw a professional table
-  private static drawTable(doc: any, startX: number, startY: number, width: number, headers: string[], rows: any[][], options: any = {}) {
-    const cellPadding = options.cellPadding || 8;
-    const headerHeight = options.headerHeight || 25;
-    const rowHeight = options.rowHeight || 20;
-    const headerColor = options.headerColor || '#2c3e50';
-    const headerTextColor = options.headerTextColor || '#FFFFFF';
-    const borderColor = options.borderColor || '#bdc3c7';
-    const alternateRowColor = options.alternateRowColor || '#f8f9fa';
-    
-    const colWidth = width / headers.length;
-    let currentY = startY;
-
-    // Draw header
-    doc.rect(startX, currentY, width, headerHeight).fill(headerColor).stroke(borderColor);
-    doc.fontSize(10).fillColor(headerTextColor).font('Helvetica-Bold');
-    
-    headers.forEach((header, i) => {
-      doc.text(header, startX + (i * colWidth) + cellPadding, currentY + cellPadding, {
-        width: colWidth - (cellPadding * 2),
-        align: 'left'
-      });
-    });
-
-    currentY += headerHeight;
-
-    // Draw rows
-    rows.forEach((row, rowIndex) => {
-      // Alternate row colors
-      if (rowIndex % 2 === 0) {
-        doc.rect(startX, currentY, width, rowHeight).fill(alternateRowColor).stroke(borderColor);
-      } else {
-        doc.rect(startX, currentY, width, rowHeight).fill('#FFFFFF').stroke(borderColor);
-      }
-
-      doc.fontSize(9).fillColor('#000000').font('Helvetica');
-      
-      row.forEach((cell, cellIndex) => {
-        const cellX = startX + (cellIndex * colWidth) + cellPadding;
-        const cellY = currentY + cellPadding;
-        
-        if (typeof cell === 'object' && cell.color) {
-          doc.fillColor(cell.color);
-          doc.text(cell.text, cellX, cellY, {
-            width: colWidth - (cellPadding * 2),
-            align: cell.align || 'left'
-          });
-        } else {
-          doc.fillColor('#000000');
-          doc.text(cell.toString(), cellX, cellY, {
-            width: colWidth - (cellPadding * 2),
-            align: 'left'
-          });
-        }
-      });
-
-      currentY += rowHeight;
-    });
-
-    return currentY;
-  }
-
   // Create individual salary slip PDF using PDFKit
   private static createSalarySlipPDF(salary: any, user: any): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
         const doc = new PDFDocument({ 
-          margin: 40,
+          margin: 50,
           size: 'A4',
           info: {
             Title: `Salary Slip - ${user.name} - ${salary.month} ${salary.year}`,
@@ -146,151 +84,146 @@ export class PDFService {
           resolve(pdfData);
         });
 
-        // Page dimensions
-        const pageWidth = doc.page.width - 80; // Account for margins
-        const leftMargin = 40;
+        const pageWidth = doc.page.width - 100;
+        const leftMargin = 50;
 
-        // Company Header with Logo Area
-        doc.rect(leftMargin, 40, pageWidth, 100).fill('#1a365d').stroke('#2d3748');
+        // Header with Orange Logo
+        doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
+        doc.text('MANTAEVERT', leftMargin, 50);
         
-        // Company Name and Logo Area
-        doc.fontSize(32).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text('MANTAEVERT', leftMargin + 20, 65);
+        doc.fontSize(12).fillColor('#000000').font('Helvetica');
+        doc.text('Human Resources Management System', leftMargin, 90);
         
-        doc.fontSize(12).fillColor('#e2e8f0').font('Helvetica');
-        doc.text('Human Resources Management System', leftMargin + 20, 100);
-        doc.text('📧 hr@mantaevert.com | 📞 +1 (555) 123-4567', leftMargin + 20, 115);
-
         // Document Title
-        doc.fontSize(24).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text('SALARY SLIP', pageWidth - 150, 65);
+        doc.fontSize(20).fillColor('#000000').font('Helvetica-Bold');
+        doc.text('SALARY SLIP', leftMargin, 120);
         
-        // Document Info Box
-        doc.rect(pageWidth - 140, 85, 120, 45).fill('#2d3748').stroke('#4a5568');
-        doc.fontSize(9).fillColor('#FFFFFF').font('Helvetica');
-        doc.text(`Period: ${salary.month} ${salary.year}`, pageWidth - 135, 90);
-        doc.text(`Slip #: ${salary._id.toString().slice(-8).toUpperCase()}`, pageWidth - 135, 105);
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 135, 120);
+        // Document Info
+        doc.fontSize(10).fillColor('#000000').font('Helvetica');
+        doc.text(`Period: ${salary.month} ${salary.year}`, pageWidth - 100, 50);
+        doc.text(`Slip #: ${salary._id.toString().slice(-8).toUpperCase()}`, pageWidth - 100, 65);
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 100, 80);
 
-        // Employee Information Table
-        let currentY = 170;
-        doc.fontSize(14).fillColor('#2c3e50').font('Helvetica-Bold');
-        doc.text('EMPLOYEE INFORMATION', leftMargin, currentY);
-        
-        currentY += 25;
-        const empHeaders = ['Field', 'Details'];
-        const empRows = [
-          ['Employee Name', user.name || 'N/A'],
-          ['Employee ID', `#${user._id.toString().slice(-8).toUpperCase()}`],
-          ['Email Address', user.email || 'N/A'],
-          ['Position', user.position || 'N/A'],
-          ['Department', user.department || 'General'],
-          ['Payment Status', { 
-            text: salary.isPaid ? 'PAID ✓' : 'PENDING ⏳', 
-            color: salary.isPaid ? '#27ae60' : '#e74c3c',
-            align: 'left'
-          }]
+        let currentY = 160;
+
+        // Employee Information
+        doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
+        doc.text('Employee Information', leftMargin, currentY);
+        currentY += 20;
+
+        const empData = [
+          ['Employee Name:', user.name || 'N/A'],
+          ['Employee ID:', `#${user._id.toString().slice(-8).toUpperCase()}`],
+          ['Position:', user.position || 'N/A'],
+          ['Department:', 'General'],
+          ['Status:', salary.isPaid ? 'PAID ✓' : 'PENDING']
         ];
 
-        currentY = this.drawTable(doc, leftMargin, currentY, pageWidth, empHeaders, empRows, {
-          headerColor: '#3498db',
-          alternateRowColor: '#f8f9fa'
+        empData.forEach(([label, value]) => {
+          doc.fontSize(10).fillColor('#000000').font('Helvetica-Bold');
+          doc.text(label, leftMargin, currentY, { width: 120 });
+          doc.font('Helvetica');
+          doc.text(value, leftMargin + 120, currentY);
+          currentY += 15;
         });
+
+        currentY += 20;
 
         // Salary Breakdown Table
-        currentY += 30;
-        doc.fontSize(14).fillColor('#2c3e50').font('Helvetica-Bold');
-        doc.text('SALARY BREAKDOWN', leftMargin, currentY);
-        
+        doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
+        doc.text('Salary Breakdown', leftMargin, currentY);
         currentY += 25;
-        const salaryHeaders = ['Description', 'Amount ($)', 'Type'];
-        const salaryRows = [
-          ['Base Salary', `$${(salary.baseSalary || 0).toFixed(2)}`, 'Earning'],
-          ['Overtime Pay', `$${(salary.overtime || 0).toFixed(2)}`, 'Earning'],
-          ['Bonuses & Allowances', `$${(salary.bonuses || 0).toFixed(2)}`, 'Earning'],
-          ['Deductions', { 
-            text: `-$${(salary.deductions || 0).toFixed(2)}`, 
-            color: '#e74c3c' 
-          }, 'Deduction']
+
+        // Table Header
+        doc.rect(leftMargin, currentY, pageWidth, 25).fill('#FF6600');
+        doc.fontSize(11).fillColor('#FFFFFF').font('Helvetica-Bold');
+        doc.text('Description', leftMargin + 10, currentY + 8);
+        doc.text('Amount (DH)', leftMargin + 250, currentY + 8);
+        doc.text('Type', leftMargin + 400, currentY + 8);
+        currentY += 25;
+
+        // Table Rows
+        const salaryData = [
+          ['Base Salary', (salary.baseSalary || 0).toFixed(2), 'Earning'],
+          ['Overtime Pay', (salary.overtime || 0).toFixed(2), 'Earning'],
+          ['Bonuses', (salary.bonuses || 0).toFixed(2), 'Earning'],
+          ['Deductions', (salary.deductions || 0).toFixed(2), 'Deduction']
         ];
 
-        currentY = this.drawTable(doc, leftMargin, currentY, pageWidth, salaryHeaders, salaryRows, {
-          headerColor: '#27ae60',
-          alternateRowColor: '#f0fff4'
+        salaryData.forEach(([desc, amount, type], index) => {
+          const bgColor = index % 2 === 0 ? '#F8F9FA' : '#FFFFFF';
+          doc.rect(leftMargin, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
+          
+          doc.fontSize(10).fillColor('#000000').font('Helvetica');
+          doc.text(desc, leftMargin + 10, currentY + 6);
+          doc.text(`${amount} DH`, leftMargin + 250, currentY + 6);
+          doc.text(type, leftMargin + 400, currentY + 6);
+          currentY += 20;
         });
 
-        // Net Salary Box
-        currentY += 20;
-        doc.rect(leftMargin, currentY, pageWidth, 40).fill('#2c3e50').stroke('#34495e');
-        doc.fontSize(16).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text('NET SALARY', leftMargin + 20, currentY + 12);
-        doc.fontSize(20);
-        doc.text(`$${(salary.totalSalary || 0).toFixed(2)}`, pageWidth - 120, currentY + 10);
+        // Total Section
+        currentY += 10;
+        doc.rect(leftMargin, currentY, pageWidth, 30).fill('#FF6600');
+        doc.fontSize(14).fillColor('#FFFFFF').font('Helvetica-Bold');
+        doc.text('NET SALARY:', leftMargin + 10, currentY + 8);
+        doc.text(`${(salary.totalSalary || 0).toFixed(2)} DH`, leftMargin + 250, currentY + 8);
+        currentY += 50;
 
-        // Attendance Summary Table (if available)
+        // Attendance Summary (if available)
         if (salary.presentDays !== undefined) {
-          currentY += 70;
-          doc.fontSize(14).fillColor('#2c3e50').font('Helvetica-Bold');
-          doc.text('ATTENDANCE SUMMARY', leftMargin, currentY);
-          
+          doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
+          doc.text('Attendance Summary', leftMargin, currentY);
           currentY += 25;
-          const attHeaders = ['Metric', 'Count', 'Details'];
-          const attRows = [
-            ['Total Working Days', `${salary.totalWorkingDays || 0}`, 'Days in pay period'],
-            ['Days Present', { 
-              text: `${salary.presentDays || 0}`, 
-              color: '#27ae60' 
-            }, 'Days attended'],
-            ['Days Absent', { 
-              text: `${salary.absentDays || 0}`, 
-              color: '#e74c3c' 
-            }, 'Days missed'],
-            ['Total Hours Worked', `${(salary.totalHoursWorked || 0).toFixed(1)}h`, 'Productive hours']
+
+          // Attendance Table Header
+          doc.rect(leftMargin, currentY, pageWidth, 25).fill('#FF6600');
+          doc.fontSize(11).fillColor('#FFFFFF').font('Helvetica-Bold');
+          doc.text('Metric', leftMargin + 10, currentY + 8);
+          doc.text('Count', leftMargin + 200, currentY + 8);
+          doc.text('Details', leftMargin + 300, currentY + 8);
+          currentY += 25;
+
+          const attData = [
+            ['Working Days', salary.totalWorkingDays || 0, 'Total days'],
+            ['Present Days', salary.presentDays || 0, 'Days attended'],
+            ['Absent Days', salary.absentDays || 0, 'Days missed'],
+            ['Hours Worked', `${(salary.totalHoursWorked || 0).toFixed(1)}h`, 'Total hours']
           ];
 
-          currentY = this.drawTable(doc, leftMargin, currentY, pageWidth, attHeaders, attRows, {
-            headerColor: '#9b59b6',
-            alternateRowColor: '#faf5ff'
+          attData.forEach(([metric, count, details], index) => {
+            const bgColor = index % 2 === 0 ? '#F8F9FA' : '#FFFFFF';
+            doc.rect(leftMargin, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
+            
+            doc.fontSize(10).fillColor('#000000').font('Helvetica');
+            doc.text(metric, leftMargin + 10, currentY + 6);
+            doc.text(count.toString(), leftMargin + 200, currentY + 6);
+            doc.text(details, leftMargin + 300, currentY + 6);
+            currentY += 20;
           });
+          currentY += 20;
         }
 
-        // Signature Section
-        currentY += 50;
-        doc.fontSize(14).fillColor('#2c3e50').font('Helvetica-Bold');
-        doc.text('AUTHORIZATION & SIGNATURES', leftMargin, currentY);
-        
+        // Signatures
+        doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold');
+        doc.text('Authorized Signatures', leftMargin, currentY);
         currentY += 30;
-        
-        // HR Signature Box
-        doc.rect(leftMargin, currentY, (pageWidth / 2) - 10, 80).fill('#f8f9fa').stroke('#dee2e6');
-        doc.fontSize(12).fillColor('#2c3e50').font('Helvetica-Bold');
-        doc.text('HR DEPARTMENT', leftMargin + 10, currentY + 10);
-        
-        // Signature line
-        doc.moveTo(leftMargin + 10, currentY + 50).lineTo(leftMargin + (pageWidth / 2) - 20, currentY + 50).stroke('#000000');
-        doc.fontSize(9).fillColor('#666666').font('Helvetica');
-        doc.text('Authorized Signature', leftMargin + 10, currentY + 55);
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, leftMargin + 10, currentY + 68);
 
-        // Employee Signature Box
-        doc.rect(leftMargin + (pageWidth / 2) + 10, currentY, (pageWidth / 2) - 10, 80).fill('#f8f9fa').stroke('#dee2e6');
-        doc.fontSize(12).fillColor('#2c3e50').font('Helvetica-Bold');
-        doc.text('EMPLOYEE ACKNOWLEDGMENT', leftMargin + (pageWidth / 2) + 20, currentY + 10);
-        
-        // Signature line
-        doc.moveTo(leftMargin + (pageWidth / 2) + 20, currentY + 50).lineTo(pageWidth + 30, currentY + 50).stroke('#000000');
-        doc.fontSize(9).fillColor('#666666').font('Helvetica');
-        doc.text('Employee Signature', leftMargin + (pageWidth / 2) + 20, currentY + 55);
-        doc.text(`${user.name}`, leftMargin + (pageWidth / 2) + 20, currentY + 68);
+        // HR Signature
+        doc.fontSize(10).fillColor('#000000').font('Helvetica');
+        doc.text('HR Department', leftMargin, currentY);
+        doc.moveTo(leftMargin, currentY + 30).lineTo(leftMargin + 150, currentY + 30).stroke('#000000');
+        doc.text('Signature & Date', leftMargin, currentY + 35);
+
+        // Employee Signature
+        doc.text('Employee', leftMargin + 300, currentY);
+        doc.moveTo(leftMargin + 300, currentY + 30).lineTo(leftMargin + 450, currentY + 30).stroke('#000000');
+        doc.text(`${user.name}`, leftMargin + 300, currentY + 35);
 
         // Footer
-        currentY += 110;
-        doc.rect(leftMargin, currentY, pageWidth, 40).fill('#1a365d');
-        doc.fontSize(9).fillColor('#FFFFFF').font('Helvetica');
-        doc.text('This is a computer-generated salary slip. No physical signature is required unless specified.', leftMargin + 10, currentY + 8);
-        doc.text('For queries, contact HR at hr@mantaevert.com | Confidential Document', leftMargin + 10, currentY + 22);
-        doc.fillColor('#cbd5e0');
-        doc.text(`© ${new Date().getFullYear()} Mantaevert. All rights reserved. | Generated on ${new Date().toLocaleString()}`, leftMargin + 10, currentY + 32);
+        currentY += 80;
+        doc.fontSize(8).fillColor('#666666').font('Helvetica');
+        doc.text('This is a computer-generated document. For queries, contact HR at hr@mantaevert.com', leftMargin, currentY);
+        doc.text(`Generated on ${new Date().toLocaleString()}`, leftMargin, currentY + 12);
 
         doc.end();
       } catch (error) {
@@ -304,7 +237,7 @@ export class PDFService {
     return new Promise((resolve, reject) => {
       try {
         const doc = new PDFDocument({ 
-          margin: 40,
+          margin: 50,
           size: 'A4',
           info: {
             Title: `Receipt - ${user.name} - ${receipt._id.toString().slice(-8).toUpperCase()}`,
@@ -321,125 +254,123 @@ export class PDFService {
           resolve(pdfData);
         });
 
-        // Page dimensions
-        const pageWidth = doc.page.width - 80;
-        const leftMargin = 40;
+        const pageWidth = doc.page.width - 100;
+        const leftMargin = 50;
 
-        // Company Header
-        doc.rect(leftMargin, 40, pageWidth, 100).fill('#1a365d').stroke('#2d3748');
+        // Header with Orange Logo
+        doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
+        doc.text('MANTAEVERT', leftMargin, 50);
         
-        doc.fontSize(32).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text('MANTAEVERT', leftMargin + 20, 65);
+        doc.fontSize(12).fillColor('#000000').font('Helvetica');
+        doc.text('Human Resources Management System', leftMargin, 90);
         
-        doc.fontSize(12).fillColor('#e2e8f0').font('Helvetica');
-        doc.text('Human Resources Management System', leftMargin + 20, 100);
-        doc.text('📧 hr@mantaevert.com | 📞 +1 (555) 123-4567', leftMargin + 20, 115);
-
         // Document Title
-        doc.fontSize(24).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text('PAYMENT RECEIPT', pageWidth - 180, 65);
+        doc.fontSize(20).fillColor('#000000').font('Helvetica-Bold');
+        doc.text('PAYMENT RECEIPT', leftMargin, 120);
         
-        // Receipt Info Box
-        doc.rect(pageWidth - 140, 85, 120, 45).fill('#2d3748').stroke('#4a5568');
-        doc.fontSize(9).fillColor('#FFFFFF').font('Helvetica');
-        doc.text(`Receipt #: ${receipt._id.toString().slice(-8).toUpperCase()}`, pageWidth - 135, 90);
-        doc.text(`Date: ${new Date(receipt.date).toLocaleDateString()}`, pageWidth - 135, 105);
-        doc.text(`Time: ${new Date(receipt.date).toLocaleTimeString()}`, pageWidth - 135, 120);
+        // Document Info
+        doc.fontSize(10).fillColor('#000000').font('Helvetica');
+        doc.text(`Receipt #: ${receipt._id.toString().slice(-8).toUpperCase()}`, pageWidth - 100, 50);
+        doc.text(`Date: ${new Date(receipt.date).toLocaleDateString()}`, pageWidth - 100, 65);
+        doc.text(`Time: ${new Date(receipt.date).toLocaleTimeString()}`, pageWidth - 100, 80);
 
-        // Employee Information Table
-        let currentY = 170;
-        doc.fontSize(14).fillColor('#2c3e50').font('Helvetica-Bold');
-        doc.text('RECIPIENT INFORMATION', leftMargin, currentY);
-        
-        currentY += 25;
-        const empHeaders = ['Field', 'Details'];
-        const empRows = [
-          ['Recipient Name', user.name || 'N/A'],
-          ['Employee ID', `#${user._id.toString().slice(-8).toUpperCase()}`],
-          ['Email Address', user.email || 'N/A'],
-          ['Receipt Type', receipt.type.charAt(0).toUpperCase() + receipt.type.slice(1)]
+        let currentY = 160;
+
+        // Recipient Information
+        doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
+        doc.text('Recipient Information', leftMargin, currentY);
+        currentY += 20;
+
+        const recipientData = [
+          ['Recipient Name:', user.name || 'N/A'],
+          ['Employee ID:', `#${user._id.toString().slice(-8).toUpperCase()}`],
+          ['Email:', user.email || 'N/A'],
+          ['Receipt Type:', receipt.type.charAt(0).toUpperCase() + receipt.type.slice(1)]
         ];
 
-        currentY = this.drawTable(doc, leftMargin, currentY, pageWidth, empHeaders, empRows, {
-          headerColor: '#3498db',
-          alternateRowColor: '#f8f9fa'
+        recipientData.forEach(([label, value]) => {
+          doc.fontSize(10).fillColor('#000000').font('Helvetica-Bold');
+          doc.text(label, leftMargin, currentY, { width: 120 });
+          doc.font('Helvetica');
+          doc.text(value, leftMargin + 120, currentY);
+          currentY += 15;
         });
 
-        // Amount Section
         currentY += 30;
-        doc.rect(leftMargin, currentY, pageWidth, 60).fill('#27ae60').stroke('#229954');
+
+        // Amount Section
+        doc.rect(leftMargin, currentY, pageWidth, 50).fill('#FF6600');
         doc.fontSize(16).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text('TOTAL AMOUNT', leftMargin + 20, currentY + 15);
-        doc.fontSize(36);
-        doc.text(`$${(receipt.amount || 0).toFixed(2)}`, leftMargin + 20, currentY + 35);
+        doc.text('TOTAL AMOUNT:', leftMargin + 20, currentY + 10);
+        doc.fontSize(24);
+        doc.text(`${(receipt.amount || 0).toFixed(2)} DH`, leftMargin + 20, currentY + 25);
+        currentY += 70;
+
+        // Payment Details
+        doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
+        doc.text('Payment Details', leftMargin, currentY);
+        currentY += 25;
 
         // Payment Details Table
-        currentY += 90;
-        doc.fontSize(14).fillColor('#2c3e50').font('Helvetica-Bold');
-        doc.text('PAYMENT DETAILS', leftMargin, currentY);
-        
+        doc.rect(leftMargin, currentY, pageWidth, 25).fill('#FF6600');
+        doc.fontSize(11).fillColor('#FFFFFF').font('Helvetica-Bold');
+        doc.text('Description', leftMargin + 10, currentY + 8);
+        doc.text('Information', leftMargin + 250, currentY + 8);
         currentY += 25;
-        const paymentHeaders = ['Description', 'Information'];
-        const paymentRows = [
+
+        const paymentData = [
           ['Payment Method', 'Company Transfer'],
           ['Transaction ID', receipt._id.toString().slice(-12).toUpperCase()],
           ['Processing Date', new Date(receipt.date).toLocaleDateString()],
-          ['Status', { text: 'COMPLETED ✓', color: '#27ae60' }]
+          ['Status', 'COMPLETED ✓']
         ];
 
-        currentY = this.drawTable(doc, leftMargin, currentY, pageWidth, paymentHeaders, paymentRows, {
-          headerColor: '#f39c12',
-          alternateRowColor: '#fef9e7'
+        paymentData.forEach(([desc, info], index) => {
+          const bgColor = index % 2 === 0 ? '#F8F9FA' : '#FFFFFF';
+          doc.rect(leftMargin, currentY, pageWidth, 20).fill(bgColor).stroke('#E0E0E0');
+          
+          doc.fontSize(10).fillColor('#000000').font('Helvetica');
+          doc.text(desc, leftMargin + 10, currentY + 6);
+          doc.text(info, leftMargin + 250, currentY + 6);
+          currentY += 20;
         });
+
+        currentY += 20;
 
         // Description Section
-        currentY += 30;
-        doc.fontSize(14).fillColor('#2c3e50').font('Helvetica-Bold');
-        doc.text('DESCRIPTION', leftMargin, currentY);
-        
+        doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
+        doc.text('Description', leftMargin, currentY);
         currentY += 20;
-        doc.rect(leftMargin, currentY, pageWidth, 60).fill('#f8f9fa').stroke('#dee2e6');
-        doc.fontSize(11).fillColor('#000000').font('Helvetica');
-        doc.text(receipt.description || 'No description provided', leftMargin + 15, currentY + 15, { 
-          width: pageWidth - 30,
+
+        doc.rect(leftMargin, currentY, pageWidth, 40).fill('#F8F9FA').stroke('#E0E0E0');
+        doc.fontSize(10).fillColor('#000000').font('Helvetica');
+        doc.text(receipt.description || 'No description provided', leftMargin + 10, currentY + 10, {
+          width: pageWidth - 20,
           align: 'left'
         });
+        currentY += 60;
 
-        // Signature Section
-        currentY += 90;
-        doc.fontSize(14).fillColor('#2c3e50').font('Helvetica-Bold');
-        doc.text('AUTHORIZATION & ACKNOWLEDGMENT', leftMargin, currentY);
-        
+        // Signatures
+        doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold');
+        doc.text('Authorized Signatures', leftMargin, currentY);
         currentY += 30;
-        
-        // HR Signature Box
-        doc.rect(leftMargin, currentY, (pageWidth / 2) - 10, 80).fill('#f8f9fa').stroke('#dee2e6');
-        doc.fontSize(12).fillColor('#2c3e50').font('Helvetica-Bold');
-        doc.text('ISSUED BY', leftMargin + 10, currentY + 10);
-        
-        doc.moveTo(leftMargin + 10, currentY + 50).lineTo(leftMargin + (pageWidth / 2) - 20, currentY + 50).stroke('#000000');
-        doc.fontSize(9).fillColor('#666666').font('Helvetica');
-        doc.text('HR Department Signature', leftMargin + 10, currentY + 55);
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, leftMargin + 10, currentY + 68);
 
-        // Employee Acknowledgment Box
-        doc.rect(leftMargin + (pageWidth / 2) + 10, currentY, (pageWidth / 2) - 10, 80).fill('#f8f9fa').stroke('#dee2e6');
-        doc.fontSize(12).fillColor('#2c3e50').font('Helvetica-Bold');
-        doc.text('RECEIVED BY', leftMargin + (pageWidth / 2) + 20, currentY + 10);
-        
-        doc.moveTo(leftMargin + (pageWidth / 2) + 20, currentY + 50).lineTo(pageWidth + 30, currentY + 50).stroke('#000000');
-        doc.fontSize(9).fillColor('#666666').font('Helvetica');
-        doc.text('Recipient Signature', leftMargin + (pageWidth / 2) + 20, currentY + 55);
-        doc.text(`${user.name}`, leftMargin + (pageWidth / 2) + 20, currentY + 68);
+        // HR Signature
+        doc.fontSize(10).fillColor('#000000').font('Helvetica');
+        doc.text('HR Department', leftMargin, currentY);
+        doc.moveTo(leftMargin, currentY + 30).lineTo(leftMargin + 150, currentY + 30).stroke('#000000');
+        doc.text('Signature & Date', leftMargin, currentY + 35);
+
+        // Recipient Signature
+        doc.text('Recipient', leftMargin + 300, currentY);
+        doc.moveTo(leftMargin + 300, currentY + 30).lineTo(leftMargin + 450, currentY + 30).stroke('#000000');
+        doc.text(`${user.name}`, leftMargin + 300, currentY + 35);
 
         // Footer
-        currentY += 110;
-        doc.rect(leftMargin, currentY, pageWidth, 40).fill('#1a365d');
-        doc.fontSize(9).fillColor('#FFFFFF').font('Helvetica');
-        doc.text('This is a computer-generated receipt. Keep this document for your records.', leftMargin + 10, currentY + 8);
-        doc.text('For queries, contact HR at hr@mantaevert.com | Confidential Document', leftMargin + 10, currentY + 22);
-        doc.fillColor('#cbd5e0');
-        doc.text(`© ${new Date().getFullYear()} Mantaevert. All rights reserved. | Generated on ${new Date().toLocaleString()}`, leftMargin + 10, currentY + 32);
+        currentY += 80;
+        doc.fontSize(8).fillColor('#666666').font('Helvetica');
+        doc.text('This is a computer-generated receipt. Keep this document for your records.', leftMargin, currentY);
+        doc.text(`Generated on ${new Date().toLocaleString()}`, leftMargin, currentY + 12);
 
         doc.end();
       } catch (error) {
@@ -461,12 +392,17 @@ export class PDFService {
           resolve(pdfData);
         });
 
-        // Header
-        doc.fontSize(24).fillColor('#ff6600').text('MANTAEVERT', 50, 50);
-        doc.fontSize(18).fillColor('#000000').text('All Salaries Report', 50, 80);
-        doc.fontSize(12).text(`Generated on ${new Date().toLocaleDateString()}`, 50, 105);
+        // Header with Orange Logo
+        doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
+        doc.text('MANTAEVERT', 50, 50);
+        
+        doc.fontSize(18).fillColor('#000000').font('Helvetica-Bold');
+        doc.text('All Salaries Report', 50, 100);
+        
+        doc.fontSize(12).fillColor('#000000').font('Helvetica');
+        doc.text(`Generated on ${new Date().toLocaleDateString()}`, 50, 125);
 
-        let yPos = 140;
+        let yPos = 160;
         salaryRecords.forEach((salary, index) => {
           if (yPos > 700) {
             doc.addPage();
@@ -474,10 +410,11 @@ export class PDFService {
           }
 
           const user = salary.userId as any;
-          doc.fontSize(12).fillColor('#ff6600').text(`${index + 1}. ${user.name}`, 50, yPos);
+          doc.fontSize(12).fillColor('#FF6600').font('Helvetica-Bold');
+          doc.text(`${index + 1}. ${user.name}`, 50, yPos);
           yPos += 15;
-          doc.fontSize(10).fillColor('#000000');
-          doc.text(`${salary.month} ${salary.year} - Total: ${salary.totalSalary?.toFixed(2) || '0.00'}`, 70, yPos);
+          doc.fontSize(10).fillColor('#000000').font('Helvetica');
+          doc.text(`${salary.month} ${salary.year} - Total: ${salary.totalSalary?.toFixed(2) || '0.00'} DH`, 70, yPos);
           yPos += 25;
         });
 
@@ -501,12 +438,17 @@ export class PDFService {
           resolve(pdfData);
         });
 
-        // Header
-        doc.fontSize(24).fillColor('#ff6600').text('MANTAEVERT', 50, 50);
-        doc.fontSize(18).fillColor('#000000').text('All Receipts Report', 50, 80);
-        doc.fontSize(12).text(`Generated on ${new Date().toLocaleDateString()}`, 50, 105);
+        // Header with Orange Logo
+        doc.fontSize(36).fillColor('#FF6600').font('Helvetica-Bold');
+        doc.text('MANTAEVERT', 50, 50);
+        
+        doc.fontSize(18).fillColor('#000000').font('Helvetica-Bold');
+        doc.text('All Receipts Report', 50, 100);
+        
+        doc.fontSize(12).fillColor('#000000').font('Helvetica');
+        doc.text(`Generated on ${new Date().toLocaleDateString()}`, 50, 125);
 
-        let yPos = 140;
+        let yPos = 160;
         receipts.forEach((receipt, index) => {
           if (yPos > 700) {
             doc.addPage();
@@ -514,10 +456,11 @@ export class PDFService {
           }
 
           const user = receipt.userId as any;
-          doc.fontSize(12).fillColor('#ff6600').text(`${index + 1}. ${user.name}`, 50, yPos);
+          doc.fontSize(12).fillColor('#FF6600').font('Helvetica-Bold');
+          doc.text(`${index + 1}. ${user.name}`, 50, yPos);
           yPos += 15;
-          doc.fontSize(10).fillColor('#000000');
-          doc.text(`${receipt.type} - ${receipt.amount?.toFixed(2) || '0.00'} - ${new Date(receipt.date).toLocaleDateString()}`, 70, yPos);
+          doc.fontSize(10).fillColor('#000000').font('Helvetica');
+          doc.text(`${receipt.type} - ${receipt.amount?.toFixed(2) || '0.00'} DH - ${new Date(receipt.date).toLocaleDateString()}`, 70, yPos);
           yPos += 25;
         });
 

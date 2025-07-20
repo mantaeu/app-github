@@ -63,7 +63,7 @@ export const ProfileScreen: React.FC = () => {
       </View>
     );
 
-    const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
+    const formatCurrency = (amount: number) => `${amount.toLocaleString()} DH`;
 
     return (
       <ThemedCard style={styles.quickStatsCard}>
@@ -77,7 +77,7 @@ export const ProfileScreen: React.FC = () => {
           />
           <StatItem
             label={t('hourlyRate')}
-            value={`$${user?.hourlyRate || 0}/hr`}
+            value={`${user?.hourlyRate || 0} DH/hr`}
             icon="time-outline"
             color="#3B82F6"
           />
@@ -225,7 +225,7 @@ export const ProfileScreen: React.FC = () => {
       </View>
     );
 
-    const formatCurrency = (amount: number) => `$${amount.toLocaleString()}`;
+    const formatCurrency = (amount: number) => `${amount.toLocaleString()} DH`;
 
     return (
       <ThemedCard style={styles.compensationCard}>
@@ -239,7 +239,7 @@ export const ProfileScreen: React.FC = () => {
           />
           <CompensationItem
             label={t('hourlyRate')}
-            value={`$${user?.hourlyRate || 0} ${t('perHour')}`}
+            value={`${user?.hourlyRate || 0} DH ${t('perHour')}`}
             icon="time-outline"
             color="#3B82F6"
           />

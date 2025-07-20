@@ -145,7 +145,7 @@ export const UsersScreen: React.FC = () => {
 
       {user.salary && (
         <Text style={[styles.userSalary, { color: colors.text }]}>
-          {t('salary')}: ${user.salary}
+          {t('salary')}: {user.salary} DH
         </Text>
       )}
 
