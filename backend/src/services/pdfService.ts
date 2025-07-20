@@ -327,7 +327,15 @@ export class PDFService {
           currentY += 20;
         });
 
-        currentY += 20;
+        currentY += 15;
+
+        // Amount Section (moved here, smaller size)
+        doc.rect(leftMargin, currentY, pageWidth, 35).fill('#FF6600');
+        doc.fontSize(12).fillColor('#FFFFFF').font('Helvetica-Bold');
+        doc.text('TOTAL AMOUNT:', leftMargin + 15, currentY + 6);
+        doc.fontSize(18);
+        doc.text(`${(receipt.amount || 0).toFixed(2)} DH`, leftMargin + 15, currentY + 18);
+        currentY += 50;
 
         // Description Section
         doc.fontSize(14).fillColor('#000000').font('Helvetica-Bold');
@@ -341,14 +349,6 @@ export class PDFService {
           align: 'left'
         });
         currentY += 60;
-
-        // Amount Section (moved to bottom)
-        doc.rect(leftMargin, currentY, pageWidth, 50).fill('#FF6600');
-        doc.fontSize(16).fillColor('#FFFFFF').font('Helvetica-Bold');
-        doc.text('TOTAL AMOUNT:', leftMargin + 20, currentY + 10);
-        doc.fontSize(24);
-        doc.text(`${(receipt.amount || 0).toFixed(2)} DH`, leftMargin + 20, currentY + 25);
-        currentY += 70;
 
         // Signatures
         doc.fontSize(12).fillColor('#000000').font('Helvetica-Bold');
