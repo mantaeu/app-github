@@ -9,10 +9,10 @@ const translations = {
   en: {
     // Company Info
     hrSystem: 'Human Resources Management System',
-    email: 'hr@mantaevert.com',
-    phone: '+212 (555) 123-4567',
+    email: 'mantaeuvert@gmail.com',
+    phone: '0649736309/0660955530',
     website: 'www.mantaevert.com',
-    location: 'Casablanca, Morocco',
+    location: 'Sefrou, Morocco',
     
     // Salary Slip
     salarySlip: 'SALARY SLIP',
@@ -74,7 +74,7 @@ const translations = {
     
     // Footer
     computerGenerated: 'This is a computer-generated document. No physical signature is required unless specified.',
-    queries: 'For queries, contact HR at hr@mantaevert.com | Confidential Document',
+    queries: 'For queries, contact HR at mantaeuvert@gmail.com | Confidential Document',
     copyright: 'Mantaevert. All rights reserved. | Generated on',
     
     // Reports
@@ -96,10 +96,10 @@ const translations = {
   ar: {
     // Company Info
     hrSystem: 'نظام إدارة الموارد البشرية',
-    email: 'hr@mantaevert.com',
-    phone: '+212 (555) 123-4567',
+    email: 'mantaeuvert@gmail.com',
+    phone: '0649736309/0660955530',
     website: 'www.mantaevert.com',
-    location: 'الدار البيضاء، المغرب',
+    location: 'صفرو، المغرب',
     
     // Salary Slip
     salarySlip: 'قسيمة الراتب',
@@ -161,7 +161,7 @@ const translations = {
     
     // Footer
     computerGenerated: 'هذه وثيقة مولدة بالحاسوب. لا يتطلب توقيع فعلي ما لم يُحدد خلاف ذلك.',
-    queries: 'للاستفسارات، اتصل بالموارد البشرية على hr@mantaevert.com | وثيقة سرية',
+    queries: 'للاستفسارات، اتصل بالموارد البشرية على mantaeuvert@gmail.com | وثيقة سرية',
     copyright: 'مانتايفرت. جميع الحقوق محفوظة. | تم إنشاؤها في',
     
     // Reports
@@ -183,10 +183,10 @@ const translations = {
   fr: {
     // Company Info
     hrSystem: 'Système de Gestion des Ressources Humaines',
-    email: 'hr@mantaevert.com',
-    phone: '+212 (555) 123-4567',
+    email: 'mantaeuvert@gmail.com',
+    phone: '0649736309/0660955530',
     website: 'www.mantaevert.com',
-    location: 'Casablanca, Maroc',
+    location: 'Sefrou, Maroc',
     
     // Salary Slip
     salarySlip: 'BULLETIN DE PAIE',
@@ -248,7 +248,7 @@ const translations = {
     
     // Footer
     computerGenerated: 'Ceci est un document généré par ordinateur. Aucune signature physique n\'est requise sauf indication contraire.',
-    queries: 'Pour toute question, contactez RH à hr@mantaevert.com | Document confidentiel',
+    queries: 'Pour toute question, contactez RH à mantaeuvert@gmail.com | Document confidentiel',
     copyright: 'Mantaevert. Tous droits réservés. | Généré le',
     
     // Reports
@@ -345,11 +345,11 @@ export class PDFService {
     doc.fontSize(24).fillColor('#000000').font('Helvetica-Bold');
     doc.text('MANTAEVERT', leftMargin + 90, 55);
     
-    // Subtitle in dark gray - properly aligned
+    // Subtitle in dark gray - properly aligned with fixed text
     doc.fontSize(10).fillColor('#333333').font('Helvetica');
     doc.text(this.t('hrSystem', language), leftMargin + 90, 75);
-    doc.text(`📧 ${this.t('email', language)} | 📞 ${this.t('phone', language)}`, leftMargin + 90, 88);
-    doc.text(`🌐 ${this.t('website', language)} | 📍 ${this.t('location', language)}`, leftMargin + 90, 101);
+    doc.text(`Email: ${this.t('email', language)} | Tel: ${this.t('phone', language)}`, leftMargin + 90, 88);
+    doc.text(`Web: ${this.t('website', language)} | Address: ${this.t('location', language)}`, leftMargin + 90, 101);
     
     // Orange accent line
     doc.rect(leftMargin, 140, pageWidth, 2).fill('#FF6600');
@@ -531,7 +531,7 @@ export class PDFService {
           [this.t('position', language), user.position || 'N/A'],
           [this.t('department', language), user.department || this.t('general', language)],
           [this.t('paymentStatus', language), { 
-            text: salary.isPaid ? this.t('paid', language) + ' ✓' : this.t('pending', language) + ' ⏳', 
+            text: salary.isPaid ? this.t('paid', language) + ' [PAID]' : this.t('pending', language) + ' [PENDING]', 
             color: salary.isPaid ? '#27AE60' : '#E74C3C',
             align: 'left'
           }]
@@ -675,7 +675,7 @@ export class PDFService {
           [this.t('transactionId', language), receipt._id.toString().slice(-12).toUpperCase()],
           [this.t('processingDate', language), new Date(receipt.date).toLocaleDateString()],
           [this.t('currency', language), this.t('moroccanDirham', language)],
-          [this.t('status', language), { text: this.t('completed', language) + ' ✓', color: '#27AE60' }]
+          [this.t('status', language), { text: this.t('completed', language) + ' [COMPLETED]', color: '#27AE60' }]
         ];
 
         currentY = this.drawTable(doc, leftMargin, currentY, pageWidth, paymentHeaders, paymentRows, {
