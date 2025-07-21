@@ -1,0 +1,8 @@
+--- a/backend/src/services/pdfService.ts
++++ b/backend/src/services/pdfService.ts
+@@ -357,7 +357,7 @@ export class PDFService {
+     
+     // Company name in black - properly aligned with correct spelling
+-    doc.fontSize(24).fillColor('#000000').font('Helvetica-Bold');
++    doc.fontSize(24).fillColor('#FF6600').font('Helvetica-Bold');
+     doc.text('MANTAEUVERT', leftMargin + 100, 55);
