@@ -2,10 +2,12 @@ export interface User {
   _id: string;
   idCardNumber: string;
   name: string;
+  email?: string;
   role: 'admin' | 'worker';
   phone?: string;
   address?: string;
   position?: string;
+  department?: string;
   salary?: number;
   hourlyRate?: number;
   createdAt: string;
@@ -41,7 +43,7 @@ export interface ThemeContextType {
 
 export interface AttendanceRecord {
   _id: string;
-  userId: string;
+  userId: string | User;
   date: string;
   checkIn?: string;
   checkOut?: string;
@@ -54,7 +56,7 @@ export interface AttendanceRecord {
 
 export interface SalaryRecord {
   _id: string;
-  userId: string;
+  userId: string | User;
   month: string;
   year: number;
   baseSalary: number;
@@ -73,7 +75,7 @@ export interface SalaryRecord {
 
 export interface Receipt {
   _id: string;
-  userId: string;
+  userId: string | User;
   type: 'salary' | 'payment' | 'invoice';
   amount: number;
   description: string;

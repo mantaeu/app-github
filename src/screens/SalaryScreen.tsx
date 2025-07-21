@@ -17,7 +17,7 @@ import { ThemedButton } from '../components/ThemedButton';
 import { SearchBar } from '../components/SearchBar';
 import PDFLanguageModal from '../components/PDFLanguageModal';
 import { apiService } from '../services/api';
-import { SalaryRecord } from '../types';
+import { SalaryRecord, User } from '../types';
 import { getTranslatedMonth, getCurrentMonthNumber, getCurrentMonthName } from '../utils/dateUtils';
 
 export const SalaryScreen: React.FC = () => {
@@ -45,6 +45,22 @@ export const SalaryScreen: React.FC = () => {
   useEffect(() => {
     filterRecords();
   }, [salaryRecords, searchQuery]);
+
+  // Helper function to safely get user properties
+  const getUserProperty = (userId: string | User, property: keyof User): string => {
+    if (typeof userId === 'object' && userId && userId[property]) {
+      return String(userId[property]);
+    }
+    return '';
+  };
+
+  // Helper function to get user ID
+  const getUserId = (userId: string | User): string => {
+    if (typeof userId === 'object' && userId && userId._id) {
+      return userId._id;
+    }
+    return typeof userId === 'string' ? userId : '';
+  };
 
   const loadSalaryRecords = async () => {
     try {
@@ -80,8 +96,8 @@ export const SalaryScreen: React.FC = () => {
     const query = searchQuery.toLowerCase().trim();
     const filtered = salaryRecords.filter(record => {
       // Safe string operations with fallback to empty string
-      const userName = (record?.userId?.name || '').toLowerCase();
-      const userEmail = (record?.userId?.email || '').toLowerCase();
+      const userName = getUserProperty(record?.userId, 'name').toLowerCase();
+      const userEmail = getUserProperty(record?.userId, 'email').toLowerCase();
       const month = (record?.month || '').toLowerCase();
       const year = (record?.year || '').toString();
       const status = record?.isPaid ? 'paid' : 'pending';
@@ -159,7 +175,7 @@ export const SalaryScreen: React.FC = () => {
   };
 
   const handleMonthlyCheckout = (record: SalaryRecord) => {
-    const userId = user?.role === 'admin' ? record.userId._id : user?._id;
+    const userId = user?.role === 'admin' ? getUserId(record.userId) : user?._id;
     if (!userId) return;
 
     const monthNumber = new Date(`${record.month} 1, ${record.year}`).getMonth() + 1;
@@ -214,9 +230,11 @@ export const SalaryScreen: React.FC = () => {
   const handleMarkAsPaid = async (record: SalaryRecord) => {
     if (!record._id) return;
 
+    const workerName = getUserProperty(record.userId, 'name') || 'Unknown Worker';
+
     Alert.alert(
       'Mark as Paid',
-      `Mark salary as paid for ${record.userId?.name || 'Unknown Worker'} - ${t(getTranslatedMonth(new Date(`${record.month} 1, ${record.year}`).getMonth() + 1))} ${record.year}?`,
+      `Mark salary as paid for ${workerName} - ${t(getTranslatedMonth(new Date(`${record.month} 1, ${record.year}`).getMonth() + 1))} ${record.year}?`,
       [
         { text: t('cancel'), style: 'cancel' },
         {
@@ -271,6 +289,7 @@ export const SalaryScreen: React.FC = () => {
   const SalaryCard: React.FC<{ record: SalaryRecord }> = ({ record }) => {
     const monthNumber = new Date(`${record?.month || 'January'} 1, ${record?.year || new Date().getFullYear()}`).getMonth() + 1;
     const isDownloading = downloadingId === record._id;
+    const workerName = getUserProperty(record.userId, 'name') || 'Unknown Worker';
     
     return (
       <ThemedCard style={styles.salaryCard}>
@@ -289,7 +308,7 @@ export const SalaryScreen: React.FC = () => {
           </View>
           {user?.role === 'admin' && record?.userId && (
             <Text style={[styles.workerName, { color: colors.secondary }]}>
-              {record.userId.name || 'Unknown Worker'}
+              {workerName}
             </Text>
           )}
           {record?.isPaid && record?.paidAt && (
