@@ -12,8 +12,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useNotifications } from '../contexts/NotificationContext';
-import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { User } from '../types';
 
@@ -42,8 +40,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
 
   const { colors } = useTheme();
   const { t } = useLanguage();
-  const { addNotification } = useNotifications();
-  const { user: currentUser } = useAuth();
 
   // Reset form when modal opens/closes or editing user changes
   useEffect(() => {
@@ -97,25 +93,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       }
 
       if (response.success) {
-        // Add notification for successful user creation/update
-        if (editingUser) {
-          // User updated notification
-          addNotification({
-            titleKey: 'success',
-            messageKey: 'userUpdatedSuccessfully',
-            type: 'success',
-            metadata: { userId: editingUser._id, action: 'update' }
-          });
-        } else {
-          // New user created notification
-          addNotification({
-            titleKey: 'success',
-            messageKey: 'userCreatedSuccessfully',
-            type: 'info',
-            metadata: { userName: formData.name, userRole: formData.role, action: 'create' }
-          });
-        }
-
         Alert.alert(
           t('success'), 
           editingUser ? t('userUpdatedSuccessfully') : t('userCreatedSuccessfully')
@@ -133,14 +110,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           errorMessage = `${t('idCardNumber')} "${formData.idCardNumber}" is already in use. Please choose a different ID card number.`;
         }
         
-        // Add error notification
-        addNotification({
-          titleKey: 'error',
-          messageKey: 'failedToSaveUser',
-          type: 'error',
-          metadata: { action: editingUser ? 'update' : 'create', error: errorMessage }
-        });
-        
         Alert.alert(t('error'), errorMessage);
       }
     } catch (error) {
@@ -156,14 +125,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           errorMessage = `${t('idCardNumber')} "${formData.idCardNumber}" is already in use. Please choose a different ID card number.`;
         }
       }
-      
-      // Add error notification
-      addNotification({
-        titleKey: 'error',
-        messageKey: 'failedToSaveUser',
-        type: 'error',
-        metadata: { action: editingUser ? 'update' : 'create', error: errorMessage }
-      });
       
       Alert.alert(t('error'), errorMessage);
     }
@@ -315,6 +276,32 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
               returnKeyType="next"
             />
           </View>
+
+          {/* Daily rate field temporarily disabled */}
+          {/* <View style={styles.formGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>
+              {t('dailyRate')} (DH)
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.card,
+                  color: colors.text,
+                  borderColor: colors.border,
+                },
+              ]}
+              value={formData.salary}
+              onChangeText={(text) => setFormData(prev => ({ ...prev, salary: text }))}
+              placeholder={`${t('dailyRate')} (${t('perDay')})`}
+              placeholderTextColor={colors.secondary}
+              keyboardType="numeric"
+              returnKeyType="next"
+            />
+            <Text style={[styles.helpText, { color: colors.secondary }]}>
+              {t('dailyRateDetails')}
+            </Text>
+          </View> */}
 
           <View style={styles.formGroup}>
             <Text style={[styles.label, { color: colors.text }]}>

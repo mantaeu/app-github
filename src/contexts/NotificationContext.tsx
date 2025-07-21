@@ -4,9 +4,8 @@ import { useAuth } from './AuthContext';
 
 export interface Notification {
   id: string;
-  titleKey: string; // Translation key for title
-  messageKey: string; // Translation key for message
-  messageParams?: Record<string, string>; // Parameters for message interpolation
+  title: string;
+  message: string;
   type: 'info' | 'success' | 'warning' | 'error' | 'attendance' | 'salary' | 'system';
   isRead: boolean;
   createdAt: string;
@@ -40,6 +39,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     loadNotifications();
   }, [user]);
 
+  useEffect(() => {
+    // Generate sample notifications for demo purposes
+    if (user && notifications.length === 0) {
+      generateSampleNotifications();
+    }
+  }, [user]);
+
   const loadNotifications = async () => {
     try {
       if (!user) {
@@ -48,23 +54,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         return;
       }
 
-      // Clear any existing notifications to start fresh with new format
-      await AsyncStorage.removeItem(`notifications_${user._id}`);
-      
-      // Add a test notification with simple keys
-      const testNotification: Notification = {
-        id: 'test_' + Date.now(),
-        titleKey: 'welcome', // This should translate to "Welcome"
-        messageKey: 'loading', // This should translate to "Loading..."
-        type: 'info',
-        isRead: false,
-        createdAt: new Date().toISOString(),
-        userId: user._id,
-        metadata: { type: 'test' }
-      };
-      
-      setNotifications([testNotification]);
-      await AsyncStorage.setItem(`notifications_${user._id}`, JSON.stringify([testNotification]));
+      const storedNotifications = await AsyncStorage.getItem(`notifications_${user._id}`);
+      if (storedNotifications) {
+        const parsed = JSON.parse(storedNotifications);
+        setNotifications(parsed);
+      }
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
@@ -82,6 +76,107 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   };
 
+  const generateSampleNotifications = () => {
+    if (!user) return;
+
+    const sampleNotifications: Notification[] = [];
+    const now = new Date();
+
+    if (user.role === 'admin') {
+      // Admin notifications
+      sampleNotifications.push(
+        {
+          id: '1',
+          title: 'New User Registration',
+          message: 'John Doe has been added to the system',
+          type: 'info',
+          isRead: false,
+          createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+          userId: user._id,
+        },
+        {
+          id: '2',
+          title: 'Attendance Alert',
+          message: '3 workers are absent today',
+          type: 'warning',
+          isRead: false,
+          createdAt: new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+          userId: user._id,
+        },
+        {
+          id: '3',
+          title: 'Monthly Report Ready',
+          message: 'December attendance report is ready for review',
+          type: 'success',
+          isRead: true,
+          createdAt: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+          userId: user._id,
+        },
+        {
+          id: '4',
+          title: 'System Update',
+          message: 'System maintenance scheduled for tonight',
+          type: 'system',
+          isRead: false,
+          createdAt: new Date(now.getTime() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
+          userId: user._id,
+        },
+        {
+          id: '5',
+          title: 'Salary Processing',
+          message: 'Monthly salaries have been processed successfully',
+          type: 'salary',
+          isRead: true,
+          createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+          userId: user._id,
+        }
+      );
+    } else {
+      // Worker notifications
+      sampleNotifications.push(
+        {
+          id: '1',
+          title: 'Attendance Reminder',
+          message: 'Don\'t forget to check in when you arrive',
+          type: 'attendance',
+          isRead: false,
+          createdAt: new Date(now.getTime() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
+          userId: user._id,
+        },
+        {
+          id: '2',
+          title: 'Salary Slip Available',
+          message: 'Your December salary slip is ready for download',
+          type: 'salary',
+          isRead: false,
+          createdAt: new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
+          userId: user._id,
+        },
+        {
+          id: '3',
+          title: 'Schedule Update',
+          message: 'Your work schedule for next week has been updated',
+          type: 'info',
+          isRead: true,
+          createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+          userId: user._id,
+        },
+        {
+          id: '4',
+          title: 'Holiday Notice',
+          message: 'Office will be closed on New Year\'s Day',
+          type: 'info',
+          isRead: false,
+          createdAt: new Date(now.getTime() - 45 * 60 * 1000).toISOString(), // 45 minutes ago
+          userId: user._id,
+        }
+      );
+    }
+
+    setNotifications(sampleNotifications);
+    saveNotifications(sampleNotifications);
+  };
+
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'isRead' | 'createdAt'>) => {
     const newNotification: Notification = {
       ...notification,
@@ -90,8 +185,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       createdAt: new Date().toISOString(),
       userId: user?._id,
     };
-
-    console.log('🔔 Adding notification:', newNotification.titleKey, '-', newNotification.messageKey);
 
     setNotifications(prev => {
       const updated = [newNotification, ...prev];

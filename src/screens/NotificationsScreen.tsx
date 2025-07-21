@@ -83,40 +83,6 @@ export const NotificationsScreen: React.FC = () => {
     return date.toLocaleDateString();
   };
 
-  // Helper function to translate notification messages with parameters
-  const translateNotificationMessage = (messageKey: string, params?: Record<string, string>) => {
-    try {
-      if (!messageKey) {
-        console.log('❌ No messageKey provided');
-        return 'No message';
-      }
-      
-      console.log('🔍 Translating messageKey:', messageKey);
-      let translatedMessage = t(messageKey as any);
-      console.log('📝 Translation result:', translatedMessage);
-      
-      // If translation not found, return the key itself
-      if (!translatedMessage || translatedMessage === messageKey) {
-        console.log('⚠️ Translation not found for:', messageKey);
-        translatedMessage = messageKey;
-      }
-      
-      // Replace parameters in the message if they exist
-      if (params && Object.keys(params).length > 0) {
-        console.log('🔄 Replacing params:', params);
-        Object.entries(params).forEach(([key, value]) => {
-          translatedMessage = translatedMessage.replace(`{${key}}`, value || '');
-        });
-      }
-      
-      console.log('✅ Final message:', translatedMessage);
-      return translatedMessage;
-    } catch (error) {
-      console.error('❌ Error translating message:', error);
-      return messageKey || 'Translation error';
-    }
-  };
-
   const handleNotificationPress = (notification: Notification) => {
     if (!notification.isRead) {
       markAsRead(notification.id);
@@ -145,7 +111,7 @@ export const NotificationsScreen: React.FC = () => {
       [
         { text: t('cancel'), style: 'cancel' },
         {
-          text: t('clearAll'),
+          text: t('clear'),
           style: 'destructive',
           onPress: clearAllNotifications,
         },
@@ -153,60 +119,53 @@ export const NotificationsScreen: React.FC = () => {
     );
   };
 
-  const NotificationCard: React.FC<{ notification: Notification }> = ({ notification }) => {
-    console.log('🔔 Rendering notification:', notification);
-    
-    const titleTranslation = t(notification.titleKey as any);
-    console.log('📋 Title translation for', notification.titleKey, ':', titleTranslation);
-    
-    return (
-      <TouchableOpacity onPress={() => handleNotificationPress(notification)}>
-        <ThemedCard style={[
-          styles.notificationCard,
-          !notification.isRead && { backgroundColor: colors.primary + '05' }
-        ]}>
-          <View style={styles.notificationContent}>
-            <View style={styles.notificationHeader}>
-              <View style={[
-                styles.notificationIcon,
-                { backgroundColor: getNotificationColor(notification.type) + '15' }
-              ]}>
-                <Ionicons
-                  name={getNotificationIcon(notification.type) as any}
-                  size={20}
-                  color={getNotificationColor(notification.type)}
-                />
-              </View>
-              <View style={styles.notificationInfo}>
-                <Text style={[
-                  styles.notificationTitle,
-                  { color: colors.text },
-                  !notification.isRead && { fontWeight: '700' }
-                ]}>
-                  {titleTranslation || notification.titleKey || 'No Title'}
-                </Text>
-                <Text style={[styles.notificationTime, { color: colors.secondary }]}>
-                  {formatTimeAgo(notification.createdAt)}
-                </Text>
-              </View>
-              {!notification.isRead && (
-                <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
-              )}
-              <TouchableOpacity
-                onPress={() => handleDeleteNotification(notification)}
-                style={styles.deleteButton}
-              >
-                <Ionicons name="close" size={18} color={colors.secondary} />
-              </TouchableOpacity>
+  const NotificationCard: React.FC<{ notification: Notification }> = ({ notification }) => (
+    <TouchableOpacity onPress={() => handleNotificationPress(notification)}>
+      <ThemedCard style={[
+        styles.notificationCard,
+        !notification.isRead && { backgroundColor: colors.primary + '05' }
+      ]}>
+        <View style={styles.notificationContent}>
+          <View style={styles.notificationHeader}>
+            <View style={[
+              styles.notificationIcon,
+              { backgroundColor: getNotificationColor(notification.type) + '15' }
+            ]}>
+              <Ionicons
+                name={getNotificationIcon(notification.type) as any}
+                size={20}
+                color={getNotificationColor(notification.type)}
+              />
             </View>
-            <Text style={[styles.notificationMessage, { color: colors.secondary }]}>
-              {translateNotificationMessage(notification.messageKey, notification.messageParams)}
-            </Text>
+            <View style={styles.notificationInfo}>
+              <Text style={[
+                styles.notificationTitle,
+                { color: colors.text },
+                !notification.isRead && { fontWeight: '700' }
+              ]}>
+                {notification.title}
+              </Text>
+              <Text style={[styles.notificationTime, { color: colors.secondary }]}>
+                {formatTimeAgo(notification.createdAt)}
+              </Text>
+            </View>
+            {!notification.isRead && (
+              <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
+            )}
+            <TouchableOpacity
+              onPress={() => handleDeleteNotification(notification)}
+              style={styles.deleteButton}
+            >
+              <Ionicons name="close" size={18} color={colors.secondary} />
+            </TouchableOpacity>
           </View>
-        </ThemedCard>
-      </TouchableOpacity>
-    );
-  };
+          <Text style={[styles.notificationMessage, { color: colors.secondary }]}>
+            {notification.message}
+          </Text>
+        </View>
+      </ThemedCard>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
