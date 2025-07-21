@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { ThemedButton } from '../components/ThemedButton';
 import { SearchBar } from '../components/SearchBar';
+import PDFLanguageModal from '../components/PDFLanguageModal';
 import { apiService } from '../services/api';
 import { SalaryRecord } from '../types';
 import { getTranslatedMonth, getCurrentMonthNumber, getCurrentMonthName } from '../utils/dateUtils';
@@ -26,6 +27,12 @@ export const SalaryScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Language modal states
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [selectedSalaryRecord, setSelectedSalaryRecord] = useState<SalaryRecord | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [modalType, setModalType] = useState<'salary' | 'export'>('salary');
 
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
@@ -95,18 +102,23 @@ export const SalaryScreen: React.FC = () => {
     loadSalaryRecords();
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = () => {
     if (user?.role !== 'admin') return;
+    setModalType('export');
+    setShowLanguageModal(true);
+  };
 
+  const handleExportPDFWithLanguage = async (language: string) => {
     try {
       setExporting(true);
-      await apiService.exportAllSalariesPDF('en');
+      await apiService.exportAllSalariesPDF(language);
       Alert.alert(t('success'), t('salariesPDFExported'));
     } catch (error) {
       console.error('Error exporting salaries PDF:', error);
       Alert.alert(t('error'), t('failedToExportSalariesPDF'));
     } finally {
       setExporting(false);
+      setShowLanguageModal(false);
     }
   };
 
@@ -229,15 +241,26 @@ export const SalaryScreen: React.FC = () => {
     );
   };
 
-  const handleGenerateSalarySlip = async (record: SalaryRecord) => {
-    if (!record._id) return;
+  const handleGenerateSalarySlip = (record: SalaryRecord) => {
+    setSelectedSalaryRecord(record);
+    setModalType('salary');
+    setShowLanguageModal(true);
+  };
+
+  const handleDownloadSalarySlipWithLanguage = async (language: string) => {
+    if (!selectedSalaryRecord?._id) return;
 
     try {
-      await apiService.downloadIndividualSalarySlipPDF(record._id, 'en');
+      setDownloadingId(selectedSalaryRecord._id);
+      await apiService.downloadIndividualSalarySlipPDF(selectedSalaryRecord._id, language);
       Alert.alert(t('success'), 'Salary slip downloaded successfully');
     } catch (error) {
       console.error('Error downloading salary slip PDF:', error);
       Alert.alert(t('error'), 'Failed to download salary slip');
+    } finally {
+      setDownloadingId(null);
+      setSelectedSalaryRecord(null);
+      setShowLanguageModal(false);
     }
   };
 
@@ -247,6 +270,7 @@ export const SalaryScreen: React.FC = () => {
 
   const SalaryCard: React.FC<{ record: SalaryRecord }> = ({ record }) => {
     const monthNumber = new Date(`${record?.month || 'January'} 1, ${record?.year || new Date().getFullYear()}`).getMonth() + 1;
+    const isDownloading = downloadingId === record._id;
     
     return (
       <ThemedCard style={styles.salaryCard}>
@@ -370,6 +394,8 @@ export const SalaryScreen: React.FC = () => {
             size="small"
             variant="outline"
             style={styles.actionButton}
+            loading={isDownloading}
+            disabled={isDownloading}
           />
         </View>
       </ThemedCard>
@@ -470,6 +496,18 @@ export const SalaryScreen: React.FC = () => {
           </>
         )}
       </ScrollView>
+
+      {/* Language Selection Modal */}
+      <PDFLanguageModal
+        visible={showLanguageModal}
+        onClose={() => {
+          setShowLanguageModal(false);
+          setSelectedSalaryRecord(null);
+        }}
+        onGenerate={modalType === 'salary' ? handleDownloadSalarySlipWithLanguage : handleExportPDFWithLanguage}
+        title={modalType === 'salary' ? "Download Salary Slip" : "Export All Salaries"}
+        loading={modalType === 'salary' ? !!downloadingId : exporting}
+      />
     </View>
   );
 };

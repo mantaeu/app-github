@@ -10,7 +10,8 @@ const router = express.Router();
 router.get('/salary-slip/:salaryId', authenticate, async (req: AuthRequest, res, next) => {
   try {
     const { salaryId } = req.params;
-    const { language = 'en' } = req.query;
+    const { lang = 'en' } = req.query;
+    const language = lang as string;
 
     console.log(`🔍 Generating salary slip PDF for salary ID: ${salaryId}, language: ${language}`);
 
@@ -26,8 +27,8 @@ router.get('/salary-slip/:salaryId', authenticate, async (req: AuthRequest, res,
       // }
     }
 
-    // Generate PDF
-    const pdfBuffer = await PDFService.generateIndividualSalarySlipPDF(salaryId);
+    // Generate PDF with language support
+    const pdfBuffer = await PDFService.generateIndividualSalarySlipPDF(salaryId, language);
     console.log(`✅ PDF generated successfully, size: ${pdfBuffer.length} bytes`);
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -47,7 +48,8 @@ router.get('/salary-slip/:salaryId', authenticate, async (req: AuthRequest, res,
 router.get('/receipt/:receiptId', authenticate, async (req: AuthRequest, res, next) => {
   try {
     const { receiptId } = req.params;
-    const { language = 'en' } = req.query;
+    const { lang = 'en' } = req.query;
+    const language = lang as string;
 
     console.log(`🔍 Generating receipt PDF for receipt ID: ${receiptId}, language: ${language}`);
 
@@ -63,8 +65,8 @@ router.get('/receipt/:receiptId', authenticate, async (req: AuthRequest, res, ne
       // }
     }
 
-    // Generate PDF
-    const pdfBuffer = await PDFService.generateIndividualReceiptPDF(receiptId);
+    // Generate PDF with language support
+    const pdfBuffer = await PDFService.generateIndividualReceiptPDF(receiptId, language);
     console.log(`✅ PDF generated successfully, size: ${pdfBuffer.length} bytes`);
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -83,7 +85,8 @@ router.get('/receipt/:receiptId', authenticate, async (req: AuthRequest, res, ne
 // @access  Private/Admin
 router.get('/all-salaries', authenticate, authorize('admin'), async (req: AuthRequest, res, next) => {
   try {
-    const { language = 'en' } = req.query;
+    const { lang = 'en' } = req.query;
+    const language = lang as string;
 
     console.log(`🔍 Generating all salaries PDF, language: ${language}`);
 
@@ -94,8 +97,8 @@ router.get('/all-salaries', authenticate, authorize('admin'), async (req: AuthRe
       });
     }
 
-    // Generate PDF
-    const pdfBuffer = await PDFService.generateAllSalariesPDF();
+    // Generate PDF with language support
+    const pdfBuffer = await PDFService.generateAllSalariesPDF(language);
     console.log(`✅ All salaries PDF generated successfully, size: ${pdfBuffer.length} bytes`);
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -114,7 +117,8 @@ router.get('/all-salaries', authenticate, authorize('admin'), async (req: AuthRe
 // @access  Private/Admin
 router.get('/all-receipts', authenticate, authorize('admin'), async (req: AuthRequest, res, next) => {
   try {
-    const { language = 'en' } = req.query;
+    const { lang = 'en' } = req.query;
+    const language = lang as string;
 
     console.log(`🔍 Generating all receipts PDF, language: ${language}`);
 
@@ -125,8 +129,8 @@ router.get('/all-receipts', authenticate, authorize('admin'), async (req: AuthRe
       });
     }
 
-    // Generate PDF
-    const pdfBuffer = await PDFService.generateAllReceiptsPDF();
+    // Generate PDF with language support
+    const pdfBuffer = await PDFService.generateAllReceiptsPDF(language);
     console.log(`✅ All receipts PDF generated successfully, size: ${pdfBuffer.length} bytes`);
 
     res.setHeader('Content-Type', 'application/pdf');
