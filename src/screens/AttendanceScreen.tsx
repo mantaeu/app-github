@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { ThemedButton } from '../components/ThemedButton';
 import { SearchBar } from '../components/SearchBar';
@@ -30,6 +31,7 @@ export const AttendanceScreen: React.FC = () => {
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
 
   // Debounce search query to prevent too many re-renders
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -155,20 +157,55 @@ export const AttendanceScreen: React.FC = () => {
       });
 
       if (response.success) {
+        // Add success notification
+        addNotification({
+          titleKey: 'success',
+          messageKey: 'checkedInSuccessfully',
+          messageParams: { name: userName },
+          type: 'attendance',
+          metadata: { userId, userName, action: 'checkin', time: now.toISOString() }
+        });
+
         Alert.alert(t('success'), t('checkedInSuccessfully', { name: userName }));
         await loadAttendance();
       } else {
         if (response.error?.includes('already recorded')) {
+          // Add warning notification
+          addNotification({
+            titleKey: 'error',
+            messageKey: 'alreadyCheckedInToday',
+            messageParams: { name: userName },
+            type: 'warning',
+            metadata: { userId, userName, action: 'checkin', error: 'already_recorded' }
+          });
+
           Alert.alert(t('error'), t('alreadyCheckedInToday', { name: userName }));
         } else {
+          // Add error notification
+          addNotification({
+            titleKey: 'error',
+            messageKey: 'failedToCheckIn',
+            type: 'error',
+            metadata: { userId, userName, action: 'checkin', error: response.error }
+          });
+
           Alert.alert(t('error'), response.error || t('failedToCheckIn'));
         }
       }
     } catch (error) {
       console.error('Error checking in:', error);
+      
+      // Add error notification
+      addNotification({
+        titleKey: 'error',
+        messageKey: 'failedToCheckIn',
+        type: 'error',
+        metadata: { userId, userName, action: 'checkin', error: error }
+      });
+
       Alert.alert(t('error'), t('failedToCheckIn'));
     }
-  }, [user?.role, t, loadAttendance]);
+  }, [user?.role, t, loadAttendance, addNotification]);
 
   const handleCheckOut = useCallback(async (attendanceId: string, userName?: string) => {
     if (user?.role !== 'admin') return;
@@ -181,16 +218,42 @@ export const AttendanceScreen: React.FC = () => {
       });
 
       if (response.success) {
+        // Add success notification
+        addNotification({
+          titleKey: 'success',
+          messageKey: 'checkedOutSuccessfully',
+          messageParams: { name: userName || t('user') },
+          type: 'attendance',
+          metadata: { attendanceId, userName, action: 'checkout', time: now.toISOString() }
+        });
+
         Alert.alert(t('success'), t('checkedOutSuccessfully', { name: userName || t('user') }));
         await loadAttendance();
       } else {
+        // Add error notification
+        addNotification({
+          titleKey: 'error',
+          messageKey: 'failedToCheckOut',
+          type: 'error',
+          metadata: { attendanceId, userName, action: 'checkout', error: response.error }
+        });
+
         Alert.alert(t('error'), response.error || t('failedToCheckOut'));
       }
     } catch (error) {
       console.error('Error checking out:', error);
+      
+      // Add error notification
+      addNotification({
+        titleKey: 'error',
+        messageKey: 'failedToCheckOut',
+        type: 'error',
+        metadata: { attendanceId, userName, action: 'checkout', error: error }
+      });
+
       Alert.alert(t('error'), t('failedToCheckOut'));
     }
-  }, [user?.role, t, loadAttendance]);
+  }, [user?.role, t, loadAttendance, addNotification]);
 
   const formatTime = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleTimeString([], {

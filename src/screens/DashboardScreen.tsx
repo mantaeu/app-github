@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { apiService } from '../services/api';
 import { useNavigation } from '@react-navigation/native';
@@ -73,6 +74,7 @@ export const DashboardScreen: React.FC = () => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
+  const { unreadCount } = useNotifications();
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -314,6 +316,10 @@ export const DashboardScreen: React.FC = () => {
     loadDashboardData();
   };
 
+  const handleNotificationPress = () => {
+    navigation.navigate('Notifications' as never);
+  };
+
   // Professional Admin Dashboard
   const AdminDashboard = () => {
     const StatCard: React.FC<{
@@ -457,11 +463,16 @@ export const DashboardScreen: React.FC = () => {
               {t('hereWhatHappeningTeam')}
             </Text>
           </View>
-          <TouchableOpacity style={[styles.notificationButton, { backgroundColor: colors.card }]}>
+          <TouchableOpacity 
+            style={[styles.notificationButton, { backgroundColor: colors.card }]}
+            onPress={handleNotificationPress}
+          >
             <Ionicons name="notifications-outline" size={24} color={colors.primary} />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>3</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -525,12 +536,13 @@ export const DashboardScreen: React.FC = () => {
               color="#10B981"
               onPress={() => navigation.navigate('Attendance' as never)}
             />
-            <QuickActionButton
+            {/* Salary quick action temporarily disabled */}
+            {/* <QuickActionButton
               title={t('salary')}
               icon="card-outline"
               color="#F59E0B"
               onPress={() => navigation.navigate('Salary' as never)}
-            />
+            /> */}
             <QuickActionButton
               title={t('receipts')}
               icon="document-text-outline"
@@ -595,6 +607,17 @@ export const DashboardScreen: React.FC = () => {
               })}
             </Text>
           </View>
+          <TouchableOpacity 
+            style={[styles.notificationButton, { backgroundColor: colors.card }]}
+            onPress={handleNotificationPress}
+          >
+            <Ionicons name="notifications-outline" size={24} color={colors.primary} />
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Today's Status */}
@@ -712,7 +735,8 @@ export const DashboardScreen: React.FC = () => {
               </ThemedCard>
             </TouchableOpacity>
             
-            <TouchableOpacity 
+            {/* Salary quick action temporarily disabled */}
+            {/* <TouchableOpacity 
               style={styles.workerQuickAction}
               onPress={() => navigation.navigate('Salary' as never)}
             >
@@ -724,7 +748,7 @@ export const DashboardScreen: React.FC = () => {
                   {t('checkSalary')}
                 </Text>
               </ThemedCard>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             
             <TouchableOpacity 
               style={styles.workerQuickAction}

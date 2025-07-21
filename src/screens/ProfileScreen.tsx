@@ -67,12 +67,13 @@ export const ProfileScreen: React.FC = () => {
       <ThemedCard style={styles.quickStatsCard}>
         <Text style={[styles.cardTitle, { color: colors.text }]}>{t('quickOverview')}</Text>
         <View style={styles.statsContainer}>
-          <StatItem
+          {/* Daily rate temporarily disabled */}
+          {/* <StatItem
             label={t('dailyRate')}
             value={`${user?.salary || 0} DH/${t('perDay')}`}
             icon="card-outline"
             color="#10B981"
-          />
+          /> */}
           <StatItem
             label={t('workerType')}
             value={t('dailyWorker')}
@@ -263,7 +264,8 @@ export const ProfileScreen: React.FC = () => {
         <QuickStatsCard />
         <PersonalInfoCard />
         <WorkInfoCard />
-        <CompensationCard />
+        {/* Compensation card temporarily disabled */}
+        {/* <CompensationCard /> */}
       </View>
       
       <View style={styles.bottomPadding} />

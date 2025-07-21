@@ -3,8 +3,10 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { LoginScreen } from '../screens/LoginScreen';
 import { TabNavigator } from './TabNavigator';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { View, ActivityIndicator } from 'react-native';
 
 const Stack = createStackNavigator();
@@ -12,6 +14,7 @@ const Stack = createStackNavigator();
 export const AppNavigator: React.FC = () => {
   const { user, loading } = useAuth();
   const { colors } = useTheme();
+  const { t } = useLanguage();
 
   // Show loading screen during auth state changes
   if (loading) {
@@ -37,10 +40,29 @@ export const AppNavigator: React.FC = () => {
         }}
       >
         {user ? (
-          <Stack.Screen 
-            name="Main" 
-            component={TabNavigator}
-          />
+          <>
+            <Stack.Screen 
+              name="Main" 
+              component={TabNavigator}
+            />
+            <Stack.Screen 
+              name="Notifications" 
+              component={NotificationsScreen}
+              options={{
+                headerShown: true,
+                title: t('notifications'),
+                headerStyle: {
+                  backgroundColor: colors.card,
+                  borderBottomColor: colors.border,
+                  borderBottomWidth: 1,
+                },
+                headerTintColor: colors.text,
+                headerTitleStyle: {
+                  fontWeight: 'bold',
+                },
+              }}
+            />
+          </>
         ) : (
           <Stack.Screen 
             name="Login" 

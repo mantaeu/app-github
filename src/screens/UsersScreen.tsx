@@ -12,13 +12,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { ThemedCard } from '../components/ThemedCard';
 import { ThemedButton } from '../components/ThemedButton';
 import { SearchBar } from '../components/SearchBar';
 import { UserFormModal } from '../components/UserFormModal';
 import { apiService } from '../services/api';
 import { User } from '../types';
-import { getTranslatedMonth, getCurrentMonthNumber, getCurrentMonthName } from '../utils/dateUtils';
 
 export const UsersScreen: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -32,6 +32,7 @@ export const UsersScreen: React.FC = () => {
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     loadUsers();
@@ -114,75 +115,48 @@ export const UsersScreen: React.FC = () => {
         {
           text: t('delete'),
           style: 'destructive',
-          onPress: () => confirmDeleteUser(userId),
+          onPress: () => confirmDeleteUser(userId, userName),
         },
       ]
     );
   };
 
-  const handleCheckout = (userId: string, userName: string) => {
-    const currentDate = new Date();
-    const currentMonthNumber = getCurrentMonthNumber();
-    const currentMonthName = getCurrentMonthName();
-    const currentYear = currentDate.getFullYear();
-
-    Alert.alert(
-      t('checkoutSalary'),
-      t('processSalaryCheckout', { 
-        name: userName, 
-        month: t(getTranslatedMonth(currentMonthNumber)), 
-        year: currentYear.toString() 
-      }),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        {
-          text: t('checkout'),
-          style: 'default',
-          onPress: () => processCheckout(userId, userName, currentMonthName, currentYear),
-        },
-      ]
-    );
-  };
-
-  const processCheckout = async (userId: string, userName: string, month: string, year: number) => {
-    try {
-      setLoading(true);
-      const response = await apiService.checkoutMonthlySalary(userId, month, year);
-      
-      if (response.success) {
-        Alert.alert(
-          t('success'),
-          t('salaryCheckoutCompleted', { name: userName }),
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert(
-          t('error'),
-          response.error || t('failedToProcessCheckout')
-        );
-      }
-    } catch (error) {
-      console.error('Error processing checkout:', error);
-      Alert.alert(
-        t('error'),
-        t('errorProcessingCheckout')
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const confirmDeleteUser = async (userId: string) => {
+  const confirmDeleteUser = async (userId: string, userName: string) => {
     try {
       const response = await apiService.deleteUser(userId);
       if (response.success) {
+        // Add success notification
+        addNotification({
+          titleKey: 'success',
+          messageKey: 'userDeletedSuccessfully',
+          type: 'warning',
+          metadata: { userId, userName, action: 'delete' }
+        });
+
         Alert.alert(t('success'), t('userDeletedSuccessfully'));
         loadUsers(); // Reload users after deletion
       } else {
+        // Add error notification
+        addNotification({
+          titleKey: 'error',
+          messageKey: 'failedToDeleteUser',
+          type: 'error',
+          metadata: { userId, userName, action: 'delete', error: response.error }
+        });
+
         Alert.alert(t('error'), response.error || t('failedToDeleteUser'));
       }
     } catch (error) {
       console.error('Error deleting user:', error);
+      
+      // Add error notification
+      addNotification({
+        titleKey: 'error',
+        messageKey: 'failedToDeleteUser',
+        type: 'error',
+        metadata: { userId, userName, action: 'delete', error: error }
+      });
+
       Alert.alert(t('error'), t('failedToDeleteUser'));
     }
   };
@@ -225,12 +199,6 @@ export const UsersScreen: React.FC = () => {
         </View>
       </View>
 
-      {user?.salary && (
-        <Text style={[styles.userSalary, { color: colors.text }]}>
-          {t('dailyRate')}: {user.salary} DH/{t('perDay')}
-        </Text>
-      )}
-
       <View style={styles.userActions}>
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
@@ -239,16 +207,6 @@ export const UsersScreen: React.FC = () => {
           <Ionicons name="pencil" size={16} color="#ffffff" />
           <Text style={styles.actionButtonText}>{t('edit')}</Text>
         </TouchableOpacity>
-
-        {user?.role === 'worker' && (
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: '#28a745' }]}
-            onPress={() => handleCheckout(user._id, user.name || 'User')}
-          >
-            <Ionicons name="card" size={16} color="#ffffff" />
-            <Text style={styles.actionButtonText}>{t('checkout')}</Text>
-          </TouchableOpacity>
-        )}
 
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.error }]}
@@ -423,11 +381,6 @@ const styles = StyleSheet.create({
   userPosition: {
     fontSize: 12,
     fontStyle: 'italic',
-  },
-  userSalary: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
   },
   userActions: {
     flexDirection: 'row',

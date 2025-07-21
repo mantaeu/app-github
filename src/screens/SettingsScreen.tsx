@@ -149,12 +149,13 @@ export const SettingsScreen: React.FC = () => {
           onPress={() => {}}
         />
         
-        <SettingItem
+        {/* Password change option removed */}
+        {/* <SettingItem
           title={t('changePassword')}
           subtitle={t('updatePassword')}
           icon="lock-closed"
           onPress={() => {}}
-        />
+        /> */}
       </ThemedCard>
 
       <ThemedCard style={styles.section}>

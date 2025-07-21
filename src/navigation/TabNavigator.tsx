@@ -102,14 +102,15 @@ export const TabNavigator: React.FC = () => {
         }}
       />
 
-      <Tab.Screen
+      {/* Salary tab temporarily disabled */}
+      {/* <Tab.Screen
         name="Salary"
         component={SalaryScreen}
         options={{
           title: t('salary'),
           headerTitle: t('salary'),
         }}
-      />
+      /> */}
 
       <Tab.Screen
         name="Receipts"

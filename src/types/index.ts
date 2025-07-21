@@ -21,6 +21,7 @@ export interface AuthContextType {
   adminLogin: (email: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  refreshUser?: () => Promise<void>;
 }
 
 export interface ThemeContextType {
