@@ -336,14 +336,14 @@ export class PDFService {
     // White background for entire header
     doc.rect(leftMargin, 40, pageWidth, 100).fill('#FFFFFF').stroke('#E5E5E5');
     
-    // Orange logo area (circle with company initial)
-    doc.circle(leftMargin + 50, 75, 25).fill('#FF6600').stroke('#E5E5E5');
-    doc.fontSize(20).fillColor('#FFFFFF').font('Helvetica-Bold');
-    doc.text('M', leftMargin + 45, 68);
+    // White logo area (circle with fancy black M)
+    doc.circle(leftMargin + 55, 75, 30).fill('#FFFFFF').stroke('#CCCCCC');
+    doc.fontSize(32).fillColor('#000000').font('Helvetica-Bold');
+    doc.text('M', leftMargin + 47, 62);
     
-    // Company name in black - properly aligned
+    // Company name in black - properly aligned with correct spelling
     doc.fontSize(24).fillColor('#000000').font('Helvetica-Bold');
-    doc.text('MANTAEVERT', leftMargin + 90, 55);
+    doc.text('MANTAEUVERT', leftMargin + 100, 55);
     
     // Subtitle in dark gray - properly aligned with fixed text
     doc.fontSize(10).fillColor('#333333').font('Helvetica');
