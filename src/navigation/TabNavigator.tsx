@@ -10,6 +10,7 @@ import { UsersScreen } from '../screens/UsersScreen';
 import { AttendanceScreen } from '../screens/AttendanceScreen';
 import { SalaryScreen } from '../screens/SalaryScreen';
 import { ReceiptsScreen } from '../screens/ReceiptsScreen';
+import { InvoiceGeneratorScreen } from '../screens/InvoiceGeneratorScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -42,6 +43,9 @@ export const TabNavigator: React.FC = () => {
               break;
             case 'Receipts':
               iconName = focused ? 'document' : 'document-outline';
+              break;
+            case 'InvoiceGenerator':
+              iconName = focused ? 'receipt' : 'receipt-outline';
               break;
             case 'Profile':
               iconName = focused ? 'person' : 'person-outline';
@@ -120,6 +124,17 @@ export const TabNavigator: React.FC = () => {
           headerTitle: t('receipts'),
         }}
       />
+
+      {isAdmin && (
+        <Tab.Screen
+          name="InvoiceGenerator"
+          component={InvoiceGeneratorScreen}
+          options={{
+            title: 'Devis/Factures',
+            headerTitle: 'Générateur de Devis/Factures',
+          }}
+        />
+      )}
 
       {!isAdmin && (
         <Tab.Screen

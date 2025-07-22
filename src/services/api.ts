@@ -325,48 +325,110 @@ class ApiService {
     await this.downloadPDF(blob, filename);
   }
 
-  // Invoice Management
-  async getInvoices(params?: { type?: string; status?: string; page?: number; limit?: number }): Promise<ApiResponse<any>> {
-    try {
-      const queryParams = new URLSearchParams();
-      if (params?.type) queryParams.append('type', params.type);
-      if (params?.status) queryParams.append('status', params.status);
-      if (params?.page) queryParams.append('page', params.page.toString());
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-
-      const endpoint = `/invoices${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-      return this.request(endpoint);
-    } catch (error) {
-      console.error('Error fetching invoices:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to fetch invoices' 
-      };
+  // Invoice/Quote Management
+  async getInvoices(params?: {
+    page?: number;
+    limit?: number;
+    type?: 'devis' | 'facture';
+    status?: string;
+    clientName?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<{
+    invoices: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  }>> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, value.toString());
+        }
+      });
     }
+    
+    const endpoint = `/invoices${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return this.request(endpoint);
   }
 
-  async getInvoice(invoiceId: string): Promise<ApiResponse<any>> {
-    return this.request(`/invoices/${invoiceId}`);
+  async getInvoiceById(id: string): Promise<ApiResponse<any>> {
+    return this.request(`/invoices/${id}`);
   }
 
-  async createInvoice(invoiceData: any): Promise<ApiResponse<any>> {
+  async createInvoice(invoiceData: {
+    type: 'devis' | 'facture';
+    clientName: string;
+    clientEmail?: string;
+    clientAddress?: string;
+    items: Array<{
+      description: string;
+      quantity: number;
+      unitPrice: number;
+    }>;
+    taxRate?: number;
+    discount?: number;
+    notes?: string;
+    dueDate?: string;
+  }): Promise<ApiResponse<any>> {
     return this.request('/invoices', {
       method: 'POST',
       body: JSON.stringify(invoiceData),
     });
   }
 
-  async updateInvoice(invoiceId: string, invoiceData: any): Promise<ApiResponse<any>> {
-    return this.request(`/invoices/${invoiceId}`, {
+  async updateInvoice(id: string, invoiceData: Partial<{
+    clientName: string;
+    clientEmail: string;
+    clientAddress: string;
+    items: Array<{
+      description: string;
+      quantity: number;
+      unitPrice: number;
+    }>;
+    taxRate: number;
+    discount: number;
+    notes: string;
+    dueDate: string;
+    status: string;
+  }>): Promise<ApiResponse<any>> {
+    return this.request(`/invoices/${id}`, {
       method: 'PUT',
       body: JSON.stringify(invoiceData),
     });
   }
 
-  async deleteInvoice(invoiceId: string): Promise<ApiResponse<any>> {
-    return this.request(`/invoices/${invoiceId}`, {
+  async deleteInvoice(id: string): Promise<ApiResponse<void>> {
+    return this.request(`/invoices/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  async markInvoiceAsPaid(id: string): Promise<ApiResponse<any>> {
+    return this.request(`/invoices/${id}/mark-paid`, {
+      method: 'PATCH',
+    });
+  }
+
+  async convertDevisToFacture(id: string): Promise<ApiResponse<any>> {
+    return this.request(`/invoices/${id}/convert-to-facture`, {
+      method: 'POST',
+    });
+  }
+
+  async getInvoiceStats(): Promise<ApiResponse<{
+    totalDevis: number;
+    totalFactures: number;
+    paidFactures: number;
+    pendingFactures: number;
+    totalRevenue: number;
+    thisMonthRevenue: number;
+  }>> {
+    return this.request('/invoices/stats/overview');
   }
 }
 

@@ -30,6 +30,10 @@ interface DashboardStats {
   lateToday: number;
   totalSalariesPaid: number;
   totalReceiptsGenerated: number;
+  totalInvoices: number;
+  totalQuotes: number;
+  paidInvoices: number;
+  pendingInvoices: number;
 }
 
 interface WorkerStats {
@@ -55,6 +59,10 @@ export const DashboardScreen: React.FC = () => {
     lateToday: 0,
     totalSalariesPaid: 0,
     totalReceiptsGenerated: 0,
+    totalInvoices: 0,
+    totalQuotes: 0,
+    paidInvoices: 0,
+    pendingInvoices: 0,
   });
   
   const [workerStats, setWorkerStats] = useState<WorkerStats>({
@@ -165,6 +173,10 @@ export const DashboardScreen: React.FC = () => {
         lateToday,
         totalSalariesPaid,
         totalReceiptsGenerated: 0,
+        totalInvoices: 0,
+        totalQuotes: 0,
+        paidInvoices: 0,
+        pendingInvoices: 0,
         recentActivity: [],
       });
 
@@ -172,16 +184,20 @@ export const DashboardScreen: React.FC = () => {
       console.error('Error loading admin stats:', error);
       // Set fallback data
       setAdminStats({
-        totalUsers: 5,
-        totalWorkers: 4,
-        monthlyAttendance: 85,
-        pendingSalaries: 3,
-        presentToday: 3,
-        absentToday: 1,
-        lateToday: 0,
-        totalSalariesPaid: 12,
-        totalReceiptsGenerated: 8,
+        totalUsers: 0,
+        monthlyAttendance: 0,
+        pendingSalaries: 0,
         recentActivity: [],
+        totalWorkers: 0,
+        presentToday: 0,
+        absentToday: 0,
+        lateToday: 0,
+        totalSalariesPaid: 0,
+        totalReceiptsGenerated: 0,
+        totalInvoices: 0,
+        totalQuotes: 0,
+        paidInvoices: 0,
+        pendingInvoices: 0,
       });
     }
   };
@@ -548,6 +564,12 @@ export const DashboardScreen: React.FC = () => {
               icon="document-text-outline"
               color="#8B5CF6"
               onPress={() => navigation.navigate('Receipts' as never)}
+            />
+            <QuickActionButton
+              title="Devis/Factures"
+              icon="receipt-outline"
+              color="#EF4444"
+              onPress={() => navigation.navigate('InvoiceGenerator' as never)}
             />
           </View>
         </View>
