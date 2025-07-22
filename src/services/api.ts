@@ -324,6 +324,50 @@ class ApiService {
     const filename = `all-receipts-${new Date().toISOString().split('T')[0]}-${language}.pdf`;
     await this.downloadPDF(blob, filename);
   }
+
+  // Invoice Management
+  async getInvoices(params?: { type?: string; status?: string; page?: number; limit?: number }): Promise<ApiResponse<any>> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.type) queryParams.append('type', params.type);
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+
+      const endpoint = `/invoices${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      return this.request(endpoint);
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to fetch invoices' 
+      };
+    }
+  }
+
+  async getInvoice(invoiceId: string): Promise<ApiResponse<any>> {
+    return this.request(`/invoices/${invoiceId}`);
+  }
+
+  async createInvoice(invoiceData: any): Promise<ApiResponse<any>> {
+    return this.request('/invoices', {
+      method: 'POST',
+      body: JSON.stringify(invoiceData),
+    });
+  }
+
+  async updateInvoice(invoiceId: string, invoiceData: any): Promise<ApiResponse<any>> {
+    return this.request(`/invoices/${invoiceId}`, {
+      method: 'PUT',
+      body: JSON.stringify(invoiceData),
+    });
+  }
+
+  async deleteInvoice(invoiceId: string): Promise<ApiResponse<any>> {
+    return this.request(`/invoices/${invoiceId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const apiService = new ApiService();
