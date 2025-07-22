@@ -11,6 +11,7 @@ import userRoutes from '../src/routes/users';
 import attendanceRoutes from '../src/routes/attendance';
 import salaryRoutes from '../src/routes/salary';
 import receiptRoutes from '../src/routes/receipts';
+import invoiceRoutes from '../src/routes/invoices';
 import dashboardRoutes from '../src/routes/dashboard';
 import pdfRoutes from '../src/routes/pdf';
 
@@ -96,6 +97,7 @@ app.get('/', (req, res) => {
       attendance: '/api/attendance',
       salary: '/api/salary',
       receipts: '/api/receipts',
+      invoices: '/api/invoices',
       dashboard: '/api/dashboard',
       pdf: '/api/pdf'
     }
@@ -117,6 +119,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/salary', salaryRoutes);
 app.use('/api/receipts', receiptRoutes);
+app.use('/api/invoices', invoiceRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/pdf', pdfRoutes);
 
