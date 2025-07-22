@@ -35,6 +35,7 @@ interface InvoiceData {
   type: 'devis' | 'facture';
   clientName: string;
   clientEmail: string;
+  clientPhone: string;
   clientAddress: string;
   items: InvoiceItem[];
   taxRate: number;
@@ -52,6 +53,7 @@ export const InvoiceGeneratorScreen: React.FC = () => {
     type: 'facture',
     clientName: '',
     clientEmail: '',
+    clientPhone: '',
     clientAddress: '',
     items: [{ id: '1', description: '', quantity: 1, unitPrice: 0, total: 0 }],
     taxRate: 20, // Default 20% VAT
@@ -172,7 +174,7 @@ export const InvoiceGeneratorScreen: React.FC = () => {
                 justify-content: space-between;
                 align-items: flex-start;
                 margin-bottom: 40px;
-                border-bottom: 3px solid #3B82F6;
+                border-bottom: 3px solid #FF8C00;
                 padding-bottom: 20px;
             }
             .company-info {
@@ -181,7 +183,7 @@ export const InvoiceGeneratorScreen: React.FC = () => {
             .company-name {
                 font-size: 28px;
                 font-weight: bold;
-                color: #3B82F6;
+                color: #FF8C00;
                 margin-bottom: 10px;
             }
             .company-details {
@@ -195,7 +197,7 @@ export const InvoiceGeneratorScreen: React.FC = () => {
             .invoice-title {
                 font-size: 32px;
                 font-weight: bold;
-                color: #3B82F6;
+                color: #FF8C00;
                 margin-bottom: 10px;
             }
             .invoice-number {
@@ -216,7 +218,7 @@ export const InvoiceGeneratorScreen: React.FC = () => {
             .client-title {
                 font-size: 18px;
                 font-weight: bold;
-                color: #3B82F6;
+                color: #FF8C00;
                 margin-bottom: 15px;
             }
             .client-info {
@@ -232,29 +234,52 @@ export const InvoiceGeneratorScreen: React.FC = () => {
                 overflow: hidden;
             }
             .items-table th {
-                background: #3B82F6;
+                background: #FF8C00;
                 color: white;
-                padding: 15px 10px;
-                text-align: left;
+                padding: 15px;
                 font-weight: 600;
                 font-size: 14px;
             }
+            .items-table th:first-child {
+                text-align: left;
+                width: 45%;
+            }
+            .items-table th:nth-child(2) {
+                text-align: center;
+                width: 15%;
+            }
+            .items-table th:nth-child(3) {
+                text-align: right;
+                width: 20%;
+            }
+            .items-table th:nth-child(4) {
+                text-align: right;
+                width: 20%;
+            }
             .items-table td {
-                padding: 12px 10px;
+                padding: 12px 15px;
                 border-bottom: 1px solid #e5e7eb;
                 font-size: 14px;
+                vertical-align: middle;
+            }
+            .items-table td:first-child {
+                text-align: left;
+            }
+            .items-table td:nth-child(2) {
+                text-align: center;
+            }
+            .items-table td:nth-child(3) {
+                text-align: right;
+            }
+            .items-table td:nth-child(4) {
+                text-align: right;
+                font-weight: 600;
             }
             .items-table tr:nth-child(even) {
                 background: #f8f9fa;
             }
             .items-table tr:hover {
-                background: #e3f2fd;
-            }
-            .text-right {
-                text-align: right;
-            }
-            .text-center {
-                text-align: center;
+                background: #fff3e0;
             }
             .totals-section {
                 margin-top: 30px;
@@ -271,7 +296,7 @@ export const InvoiceGeneratorScreen: React.FC = () => {
                 font-size: 14px;
             }
             .totals-table .total-row {
-                background: #3B82F6;
+                background: #FF8C00;
                 color: white;
                 font-weight: bold;
                 font-size: 16px;
@@ -281,11 +306,11 @@ export const InvoiceGeneratorScreen: React.FC = () => {
                 padding: 20px;
                 background: #f8f9fa;
                 border-radius: 8px;
-                border-left: 4px solid #3B82F6;
+                border-left: 4px solid #FF8C00;
             }
             .notes-title {
                 font-weight: bold;
-                color: #3B82F6;
+                color: #FF8C00;
                 margin-bottom: 10px;
             }
             .footer {
@@ -314,10 +339,10 @@ export const InvoiceGeneratorScreen: React.FC = () => {
     <body>
         <div class="header">
             <div class="company-info">
-                <div class="company-name">MantaEvert</div>
+                <div class="company-name">Manteauvert</div>
                 <div class="company-details">
                     Système de Gestion RH<br>
-                    Email: contact@mantaevert.com<br>
+                    Email: contact@manteauvert.com<br>
                     Téléphone: +212 XXX XXX XXX
                 </div>
             </div>
@@ -335,6 +360,7 @@ export const InvoiceGeneratorScreen: React.FC = () => {
             <div class="client-info">
                 <strong>${invoiceData.clientName}</strong><br>
                 ${invoiceData.clientEmail ? `Email: ${invoiceData.clientEmail}<br>` : ''}
+                ${invoiceData.clientPhone ? `Téléphone: ${invoiceData.clientPhone}<br>` : ''}
                 ${invoiceData.clientAddress ? invoiceData.clientAddress.replace(/\n/g, '<br>') : ''}
             </div>
         </div>
@@ -342,19 +368,19 @@ export const InvoiceGeneratorScreen: React.FC = () => {
         <table class="items-table">
             <thead>
                 <tr>
-                    <th style="width: 50%">Description</th>
-                    <th style="width: 15%" class="text-center">Quantité</th>
-                    <th style="width: 20%" class="text-right">Prix Unitaire</th>
-                    <th style="width: 15%" class="text-right">Total</th>
+                    <th>Description</th>
+                    <th>Quantité</th>
+                    <th>Prix Unitaire</th>
+                    <th>Total</th>
                 </tr>
             </thead>
             <tbody>
                 ${invoiceData.items.map(item => `
                     <tr>
                         <td>${item.description}</td>
-                        <td class="text-center">${item.quantity}</td>
-                        <td class="text-right">${item.unitPrice.toFixed(2)} DH</td>
-                        <td class="text-right">${item.total.toFixed(2)} DH</td>
+                        <td>${item.quantity}</td>
+                        <td>${item.unitPrice.toFixed(2)} DH</td>
+                        <td>${item.total.toFixed(2)} DH</td>
                     </tr>
                 `).join('')}
             </tbody>
@@ -364,21 +390,21 @@ export const InvoiceGeneratorScreen: React.FC = () => {
             <table class="totals-table">
                 <tr>
                     <td>Sous-total:</td>
-                    <td class="text-right">${subtotal.toFixed(2)} DH</td>
+                    <td style="text-align: right;">${subtotal.toFixed(2)} DH</td>
                 </tr>
                 ${discount > 0 ? `
                 <tr>
                     <td>Remise (${invoiceData.discount}%):</td>
-                    <td class="text-right">-${discount.toFixed(2)} DH</td>
+                    <td style="text-align: right;">-${discount.toFixed(2)} DH</td>
                 </tr>
                 ` : ''}
                 <tr>
                     <td>TVA (${invoiceData.taxRate}%):</td>
-                    <td class="text-right">${tax.toFixed(2)} DH</td>
+                    <td style="text-align: right;">${tax.toFixed(2)} DH</td>
                 </tr>
                 <tr class="total-row">
                     <td><strong>TOTAL:</strong></td>
-                    <td class="text-right"><strong>${total.toFixed(2)} DH</strong></td>
+                    <td style="text-align: right;"><strong>${total.toFixed(2)} DH</strong></td>
                 </tr>
             </table>
         </div>
@@ -397,7 +423,7 @@ export const InvoiceGeneratorScreen: React.FC = () => {
         ` : ''}
 
         <div class="footer">
-            <p>Généré par MantaEvert HR System - ${currentDate}</p>
+            <p>Généré par Manteauvert HR System - ${currentDate}</p>
             <p>${invoiceData.type === 'devis' ? 'Ce devis est valable 30 jours.' : 'Merci pour votre confiance!'}</p>
         </div>
     </body>
@@ -456,6 +482,7 @@ export const InvoiceGeneratorScreen: React.FC = () => {
                 type: 'facture',
                 clientName: '',
                 clientEmail: '',
+                clientPhone: '',
                 clientAddress: '',
                 items: [{ id: '1', description: '', quantity: 1, unitPrice: 0, total: 0 }],
                 taxRate: 20,
@@ -481,6 +508,7 @@ export const InvoiceGeneratorScreen: React.FC = () => {
       ...prev,
       clientName: selectedUser.name,
       clientEmail: selectedUser.email || '',
+      clientPhone: selectedUser.phone || '',
       clientAddress: selectedUser.address || '',
     }));
   };
@@ -578,6 +606,14 @@ export const InvoiceGeneratorScreen: React.FC = () => {
           keyboardType="email-address"
         />
         <TextInput
+          style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+          placeholder="Téléphone du client"
+          placeholderTextColor={colors.secondary}
+          value={invoiceData.clientPhone}
+          onChangeText={(text) => setInvoiceData(prev => ({ ...prev, clientPhone: text }))}
+          keyboardType="phone-pad"
+        />
+        <TextInput
           style={[styles.textArea, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
           placeholder="Adresse du client"
           placeholderTextColor={colors.secondary}
@@ -600,6 +636,22 @@ export const InvoiceGeneratorScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Table Header */}
+        <View style={styles.tableHeaderContainer}>
+          <View style={styles.descriptionColumn}>
+            <Text style={[styles.tableHeaderText, { color: colors.secondary }]}>Description</Text>
+          </View>
+          <View style={styles.quantityColumn}>
+            <Text style={[styles.tableHeaderText, { color: colors.secondary }]}>Qté</Text>
+          </View>
+          <View style={styles.priceColumn}>
+            <Text style={[styles.tableHeaderText, { color: colors.secondary }]}>Prix Unit.</Text>
+          </View>
+          <View style={styles.totalColumn}>
+            <Text style={[styles.tableHeaderText, { color: colors.secondary }]}>Total</Text>
+          </View>
+        </View>
+
         {invoiceData.items.map((item, index) => (
           <View key={item.id} style={styles.itemContainer}>
             <View style={styles.itemHeader}>
@@ -616,6 +668,7 @@ export const InvoiceGeneratorScreen: React.FC = () => {
               )}
             </View>
             
+            {/* Description Input */}
             <TextInput
               style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
               placeholder="Description de l'article *"
@@ -624,27 +677,39 @@ export const InvoiceGeneratorScreen: React.FC = () => {
               onChangeText={(text) => updateItem(item.id, 'description', text)}
             />
             
-            <View style={styles.itemRow}>
-              <TextInput
-                style={[styles.smallInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-                placeholder="Qté"
-                placeholderTextColor={colors.secondary}
-                value={item.quantity.toString()}
-                onChangeText={(text) => updateItem(item.id, 'quantity', parseInt(text) || 0)}
-                keyboardType="numeric"
-              />
-              <TextInput
-                style={[styles.smallInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-                placeholder="Prix unitaire"
-                placeholderTextColor={colors.secondary}
-                value={item.unitPrice.toString()}
-                onChangeText={(text) => updateItem(item.id, 'unitPrice', parseFloat(text) || 0)}
-                keyboardType="numeric"
-              />
-              <View style={[styles.totalDisplay, { backgroundColor: colors.border }]}>
-                <Text style={[styles.totalText, { color: colors.text }]}>
-                  {item.total.toFixed(2)} DH
-                </Text>
+            {/* Table Row */}
+            <View style={styles.itemTableRow}>
+              <View style={styles.descriptionColumn}>
+                {/* Empty space to align with description above */}
+              </View>
+              <View style={styles.quantityColumn}>
+                <TextInput
+                  style={[styles.tableInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+                  placeholder="1"
+                  placeholderTextColor={colors.secondary}
+                  value={item.quantity.toString()}
+                  onChangeText={(text) => updateItem(item.id, 'quantity', parseInt(text) || 0)}
+                  keyboardType="numeric"
+                  textAlign="center"
+                />
+              </View>
+              <View style={styles.priceColumn}>
+                <TextInput
+                  style={[styles.tableInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+                  placeholder="0.00"
+                  placeholderTextColor={colors.secondary}
+                  value={item.unitPrice.toString()}
+                  onChangeText={(text) => updateItem(item.id, 'unitPrice', parseFloat(text) || 0)}
+                  keyboardType="numeric"
+                  textAlign="right"
+                />
+              </View>
+              <View style={styles.totalColumn}>
+                <View style={[styles.totalDisplay, { backgroundColor: colors.border }]}>
+                  <Text style={[styles.totalText, { color: colors.text }]}>
+                    {item.total.toFixed(2)} DH
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -863,6 +928,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  
+  // Table Layout Styles
+  tableHeaderContainer: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    marginBottom: 16,
+  },
+  tableHeaderText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  descriptionColumn: {
+    flex: 2,
+    paddingRight: 8,
+  },
+  quantityColumn: {
+    flex: 0.8,
+    paddingHorizontal: 4,
+  },
+  priceColumn: {
+    flex: 1.2,
+    paddingHorizontal: 4,
+  },
+  totalColumn: {
+    flex: 1.2,
+    paddingLeft: 4,
+  },
+  
   itemContainer: {
     marginBottom: 20,
     paddingBottom: 16,
@@ -882,30 +978,33 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: 4,
   },
-  itemRow: {
+  itemTableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginTop: 8,
   },
-  smallInput: {
-    flex: 1,
+  tableInput: {
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     fontSize: 14,
+    minHeight: 40,
   },
   totalDisplay: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
+    minHeight: 40,
+    justifyContent: 'center',
   },
   totalText: {
     fontSize: 14,
     fontWeight: '600',
+    textAlign: 'center',
   },
+  
   calculationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -949,7 +1048,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 12,
     borderTopWidth: 2,
-    borderTopColor: '#3B82F6',
+    borderTopColor: '#FF8C00',
   },
   finalTotalLabel: {
     fontSize: 18,
